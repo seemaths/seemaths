@@ -38,6 +38,17 @@ export default {
     }
     const mathspaceHost = incoming.hostname === MATHSPACE_HOST;
     const arcadeHost = incoming.hostname === ARCADE_HOST;
+    const portalPath = /^\/api\/assignments(?:\/|$)/.test(incoming.pathname)
+      || /^\/(?:manage|a)(?:\/|$)/.test(incoming.pathname)
+      || incoming.pathname === '/assignments' || incoming.pathname === '/api/config'
+      || incoming.pathname.startsWith('/assets/');
+    if (env.ASSIGNMENTS_ORIGIN && portalPath) {
+      const target = new URL(incoming.pathname + incoming.search, env.ASSIGNMENTS_ORIGIN);
+      const response = await fetch(new Request(target, request), {redirect:'manual'});
+      const headers = new Headers(response.headers);
+      headers.set('Cache-Control', 'no-store');
+      return new Response(response.body, {status:response.status, headers});
+    }
     if (arcadeHost && incoming.pathname === '/') incoming.pathname = '/arcade-player/';
     if (mathspaceHost) incoming.pathname = mathspaceRootPath(incoming.pathname);
     if (!isProxyPath(incoming.pathname)) return env.ASSETS.fetch(request);
@@ -77,7 +88,15 @@ export default {
       }
     }
     let body = response.body;
-    if (arcadeHost && response.ok && publicPath === '/') {
+    if (response.ok && /^\/play\/?$/.test(publicPath) && response.headers.get('Content-Type')?.includes('text/html')) {
+      body = (await response.text())
+        .replace(/(<script\s+type="module"\s+src=")\/runtime\/seemaths-player\.js(\")/, env.ASSIGNMENTS_ORIGIN ? '$1/student-player.js?v=2$2' : '$&')
+        .replace('<p role="status">Opening your activity…</p>', '<div class="seemaths-opening"><div class="paper-loading-progress"><div class="paper-progress-track paper-progress-indeterminate" role="progressbar" aria-label="Loading activity"><div class="paper-progress-fill"></div></div></div></div>')
+        .replace('</head>', '<link rel="stylesheet" href="/student-session.css?v=2"></head>');
+      responseHeaders.delete('Content-Length');
+      responseHeaders.delete('Content-Encoding');
+      responseHeaders.set('Cache-Control', 'no-store');
+    } else if (arcadeHost && response.ok && publicPath === '/') {
       body = (await response.text()).replace('<head>', '<head><base href="/arcade-player/">');
       responseHeaders.delete('Content-Length');
     } else if (mathspaceHost && response.ok && publicPath === '/') {

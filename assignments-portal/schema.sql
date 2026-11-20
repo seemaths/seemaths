@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS participants (
  updated_at BIGINT NOT NULL, completed_at BIGINT,
  revision INTEGER NOT NULL DEFAULT 0,
  answers TEXT NOT NULL DEFAULT '[]', attempt_id TEXT,
+ active_seconds INTEGER NOT NULL DEFAULT 0 CHECK (active_seconds BETWEEN 0 AND 604800),
  UNIQUE(assignment_id,number), UNIQUE(assignment_id,join_hash)
 );
 CREATE INDEX IF NOT EXISTS participants_assignment ON participants(assignment_id);

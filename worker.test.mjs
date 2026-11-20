@@ -7,6 +7,29 @@ function assets() {
   return {calls, env:{ASSETS:{fetch:async request => { calls.push(request); return new Response('static asset'); }}}};
 }
 
+test('assignment APIs route to the portal while play receives the student session module', async () => {
+  const {env}=assets();env.ASSIGNMENTS_ORIGIN='https://assignments.example';
+  await withFetch(async (request, options) => {
+    const url = new URL(request.url);
+    if (url.pathname === '/api/assignments') {
+      assert.equal(url.origin,'https://assignments.example');
+      assert.equal(request.headers.get('Authorization'),'Bearer example');
+      assert.equal(options.redirect,'manual');
+      return Response.json({id:'example'});
+    }
+    assert.equal(url.origin,'https://psat.seemaths.org');
+    return new Response('<html><head><script type="module" src="/runtime/seemaths-player.js"></script></head><body><main id="app"><p role="status">Opening your activity…</p></main></body></html>', {headers:{'Content-Type':'text/html'}});
+  }, async () => {
+    const api = await worker.fetch(new Request('https://seemaths.org/api/assignments',{headers:{Authorization:'Bearer example'}}),env);
+    assert.equal(api.headers.get('Cache-Control'),'no-store');
+    const page = await worker.fetch(new Request('https://seemaths.org/play?mode=practice'),env);
+    const html = await page.text();
+    assert.match(html,/student-player\.js/);assert.match(html,/student-session\.css/);
+    assert.match(html,/role="progressbar" aria-label="Loading activity"/);
+    assert.doesNotMatch(html,/Opening your activity/);
+  });
+});
+
 test('Arcade domain opens its player with relative assets on the same host', async () => {
   const {env,calls}=assets();
   await withFetch(async request => {

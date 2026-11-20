@@ -1,0 +1,13 @@
+.paper-heading-with-layout .seemaths-student-id{display:grid;justify-items:center;align-content:center;flex:none;gap:2px;margin-left:12px;padding:2px 10px;min-width:72px;border:0;border-radius:8px;color:inherit;background:transparent;cursor:pointer;font-family:"Avenir Next",Avenir,ui-rounded,"SF Pro Rounded",sans-serif;line-height:1.1}
+.paper-heading-with-layout .seemaths-student-id:hover{background:#ffffff1f}
+.seemaths-student-id span{font-size:10px;font-weight:500;letter-spacing:.03em;opacity:.85;white-space:nowrap}
+.seemaths-student-id strong{font-size:25px;font-weight:700;letter-spacing:.07em;font-variant-numeric:tabular-nums;line-height:1}
+.seemaths-student-id:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+.seemaths-student-message{position:fixed;top:74px;right:16px;z-index:110;padding:8px 12px;border:1px solid #d9e6e1;border-radius:8px;background:white;color:#192847;font:13px/1.4 "Avenir Next",Avenir,sans-serif;box-shadow:0 3px 12px #19284712;max-width:min(360px,calc(100vw - 32px))}
+@media(max-width:650px){.paper-heading-with-layout .seemaths-student-id{padding:2px 4px;margin-left:2px;min-width:58px}.seemaths-student-id strong{font-size:22px}.seemaths-student-id span{font-size:9px}}
+@media print{.seemaths-student-id,.seemaths-student-message{display:none!important}}
+.seemaths-opening{position:fixed;inset:0;display:grid;place-items:center;pointer-events:none;--psat-primary:#243753}
+.seemaths-opening .paper-loading-progress{width:min(280px,75vw)}
+body:has(.seemaths-opening) .seemaths-activity-bar{display:none!important}
+#app .paper-heading-with-layout .seemaths-student-id{margin-left:auto}
+@media(max-width:650px){#app .paper-heading-with-layout:has(.seemaths-student-id){justify-content:space-between}#app .paper-heading-with-layout:has(.seemaths-student-id) .paper-brand{display:flex}#app .paper-heading-with-layout:has(.seemaths-student-id) .paper-title-detail{display:none}}

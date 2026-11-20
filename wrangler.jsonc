@@ -27,7 +27,8 @@
   ],
   "main": "worker.js",
   "vars": {
-    "BACKEND_ORIGIN": "https://psat.seemaths.org"
+    "BACKEND_ORIGIN": "https://psat.seemaths.org",
+    "ASSIGNMENTS_ORIGIN": "https://seemaths-assignments.vercel.app"
   },
   "build": {
     "command": "npm run build"

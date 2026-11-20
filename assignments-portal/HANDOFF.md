@@ -1,47 +1,58 @@
-# Assignment portal integration
+# Live assignment integration
 
-The portal is maintained in the standalone SeeMaths repository. Production
-player integration and deployment remain separate steps.
+The assignment service is deployed to the separate SeeMaths Vercel project
+`seemaths/seemaths-assignments`, public alias `https://seemaths-assignments.vercel.app`.
+Its server-only credentials connect to the dedicated SeeMaths Supabase database.
+The function region is Sydney. The original Sit-N-Study CLI login was preserved;
+SeeMaths uses an isolated CLI configuration at `~/.config/seemaths/vercel`.
 
-## Connect these pieces
+Cloudflare's `ASSIGNMENTS_ORIGIN` routes assignment APIs, `/assignments`, `/manage/*`,
+`/a/*` and portal assets to that backend. `/api/activities` and runtime resources
+continue using Quode. Students open `/play` directly; `/a/:id` redirects straight
+to the questions. There is no separate student screen.
 
-1. Add the existing homepage's **Assign** button, passing its bounded recipe to
-   `/assignments?...` (supported fields in `integration/PLAYER_INTEGRATION.md`).
-2. Integrate `integration/quode-assignment-bridge.js` with the player's local-save
-   callback and initial restore. It does not receive assignment credentials.
-3. Route this portal and the generator APIs deliberately. Both currently use
-   `/api`; keep `/api/activities` pointed at Quode. The portal uses
-   `/api/assignments`, `/api/config`, `/api/maintenance/cleanup`, `/assets`,
-   `/assignments`, `/a/:id` and `/manage/:id`. Prefix the portal's `/assets` if it
-   clashes with the main website. Do not replace the website's root route with this
-   module's local preview root accidentally.
-4. Create the dedicated Supabase project and run both SQL migrations. Set its
-   PostgreSQL pooler URL and other secrets on the SeeMaths backend, not the browser.
-5. Set PORTAL_ORIGIN and PLAYER_ORIGIN to final origins. Preserve HTTPS, no-referrer
-   policy, and strict iframe origin allowlists. If proxying through Cloudflare,
-   configure the trusted client-address boundary for rate limiting; never blindly
-   accept arbitrary forwarded-IP headers from clients.
-6. Verify PostgreSQL, actual player, route composition and scheduled cleanup in
-   staging before production. Production guardrails require HTTPS/PostgreSQL and
-   two separate 32+ character secrets. Review grants for the chosen server DB role.
+The Worker adds the existing PSAT-style centred loading bar to the activity shell,
+and selects the local `public/student-player.js` wrapper when assignment reporting
+is configured. That module resolves/joins the assignment before importing the hosted
+player. A fixed-toolbar four-digit Student Id button copies the number. Browser
+storage remembers the participant credential and original attempt for the assignment.
+`student-session.js` polls the locally saved attempt every two seconds while visible,
+coalesces progress in browser storage, and retries unsent snapshots. It sends no raw
+answer text or question papers to the assignment database.
 
-This module is covered by the SeeMaths repository MIT license. No third-party
-exam source materials are bundled with it.
+Homepage **Copy link** creates a tracked practice/exam assignment, remembers the
+private management key locally and reveals **Manage assignment**. Workbook and
+solution links remain ordinary document links. Legacy recipe links resolve to a
+consistent assignment without disclosing any management key. Expired explicit
+assignment UUID links remain expired; anonymous legacy recipe links can create a
+fresh activity after the old assignment has been physically purged.
 
-## Verified locally
+## Verified on the public site
 
-API tests cover authorization boundaries, concurrent numbering and retry safety,
-progress revisions and completion, cross-device paper protection, strict payloads,
-close/delete, expiry/cleanup, limits, search and headers. Bridge unit tests cover
-origin allowlisting, data minimisation and completion. Desktop browser exercise:
-create assignment → student number → first answer on teacher dashboard → offline
-answer queued → reconnect/sync → complete → reopen with completion preserved.
-The real bridge ran against a clearly labelled local test-player fixture, not the
-live player. Mobile builder/dashboard widths were checked at 390 CSS px, with no
-document overflow. Screenshots are local ignored artifacts.
+Created a one-question Number assignment on `https://seemaths.org`, opened its
+student link, received Student Id 0001, answered a real generated number-line
+question correctly, and confirmed the private dashboard reported Completed and
+1/1 correct. Reopening retained both the same ID and checked answer. Copying the
+ID produced a visible confirmation. Existing API and worker/bridge checks pass.
+The dedicated Supabase schema and cron cleanup were provisioned in the setup chat.
+The app's server role deliberately has no cron-administration privileges.
 
-The dedicated SeeMaths Supabase project is provisioned, both migrations are
-installed, and real PostgreSQL API checks passed with a dedicated server role.
-The live player has not been connected and this module has not been deployed.
-Exact question/working restoration across devices remains outside the
-browser-only storage model.
+No private Quode source or desktop registry was changed. These deployment actions
+do not move the question backend, change package downloads, or publish Quode.
+The implementation is tracked through the SeeMaths pull-request workflow.
+
+## Compact classroom progress (21 November local session)
+
+Student rows now show only the four-digit ID, one unlabelled dot per question and
+active foreground time. Green is correct first try; amber records Help Me (or a
+correct retry), red means left/skipped without a correct answer, grey means not yet
+completed/tried. Accessible hover labels retain the question number and outcome.
+Help opens, check clicks and navigation are captured in the browser; no raw answers
+are added to the server payload. `active_seconds` is monotonic and bounded to the
+assignment lifetime; migration 003 was applied to the dedicated database.
+
+A ten-question Algebra example was exercised through the real public player with
+four participants. Student 0001: five correct (one with the full Help Me flow), one
+skipped; 0002: three correct (one after opening Help Me), two skipped; 0003: two
+correct, one skipped; 0004: untried. Remaining questions are grey. The private
+example credentials live only in ignored `artifacts/classroom-test.json`.

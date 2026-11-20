@@ -674,6 +674,34 @@ progress::-webkit-progress-value {
   width: 100%;
   min-height: 50px;
 }
+.student-view .masthead nav {
+  display: none;
+}
+.student-id {
+  margin-left: auto;
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  color: var(--teal-dark);
+}
+.student-id span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  color: var(--muted);
+}
+.student-id strong {
+  font-family: "Avenir Next", Avenir, ui-rounded, "SF Pro Rounded", sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.07em;
+  line-height: 1.1;
+}
+.student-view .masthead {
+  flex-wrap: nowrap;
+  align-items: center;
+}
 .number-card {
   display: flex;
   align-items: center;
@@ -839,6 +867,9 @@ dialog .actions {
   }
 }
 @media (max-width: 600px) {
+  .student-view .brand-section {
+    display: none;
+  }
   .masthead {
     padding: 22px 20px;
     align-items: flex-start;
@@ -974,3 +1005,14 @@ dialog .actions {
     transition: none !important;
   }
 }
+.student-progress-list{padding:10px 24px 18px}
+.student-progress-row{display:grid;grid-template-columns:54px minmax(0,1fr) 64px;align-items:center;gap:22px;min-height:66px;border-top:1px solid var(--line)}
+.student-progress-row:first-child{border-top:0}
+.student-progress-row .student-number{font-size:1rem;font-weight:650;letter-spacing:.035em;font-variant-numeric:tabular-nums}
+.student-progress-dots{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.progress-dot{display:block;flex:none;width:15px;height:15px;border-radius:50%;background:#dfe4eb}
+.progress-dot.first{background:#28975f}
+.progress-dot.helped{background:#e5a431}
+.progress-dot.skipped{background:#d46565}
+.student-time{text-align:right;color:var(--muted);font-size:.875rem;white-space:nowrap;font-variant-numeric:tabular-nums}
+@media(max-width:600px){.student-progress-list{padding:8px 18px 14px}.student-progress-row{grid-template-columns:43px minmax(0,1fr) 51px;gap:12px;min-height:62px}.student-progress-dots{gap:7px}.progress-dot{width:12px;height:12px}.student-time{font-size:.8125rem}}

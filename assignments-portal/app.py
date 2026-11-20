@@ -11,11 +11,11 @@ import sqlite3
 import time
 from contextlib import contextmanager
 from typing import Literal, Optional
-from urllib.parse import urlsplit
-from uuid import UUID, uuid4
+from urllib.parse import urlsplit, urlencode
+from uuid import UUID, uuid4, uuid5, NAMESPACE_URL
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -28,15 +28,19 @@ class StrictModel(BaseModel):
 
 
 class Recipe(StrictModel):
-    topic: Literal['random', 'algebra', 'arithmetic', 'geometry', 'measurement', 'number', 'statistics'] = 'random'
+    topic: str = Field(default='random', max_length=100)
     mode: Literal['practice', 'exam'] = 'practice'
     count: int = Field(default=10, ge=1, le=99, strict=True)
     levelMin: int = Field(default=1, ge=1, le=5, strict=True)
     levelMax: int = Field(default=5, ge=1, le=5, strict=True)
     minutes: int = Field(default=30, ge=1, le=180, strict=True)
+    blueprint: Optional[str] = Field(default=None, pattern=r'^[a-zA-Z0-9_-]{1,100}$')
 
     @model_validator(mode='after')
     def levels(self):
+        subjects = self.topic.split(',')
+        if self.topic != 'random' and (len(set(subjects)) != len(subjects) or any(s not in ('algebra','arithmetic','geometry','measurement','number','statistics') for s in subjects)):
+            raise ValueError('Choose a valid maths topic.')
         if self.levelMin > self.levelMax:
             raise ValueError('Minimum level cannot exceed maximum level.')
         return self
@@ -50,6 +54,9 @@ class Join(StrictModel):
 class Answer(StrictModel):
     index: int = Field(ge=1, le=99, strict=True)
     correct: Optional[bool] = Field(default=None, strict=True)
+    helped: bool = Field(default=False, strict=True)
+    checks: int = Field(default=0, ge=0, le=999, strict=True)
+    skipped: bool = Field(default=False, strict=True)
 
 
 class Progress(StrictModel):
@@ -57,6 +64,7 @@ class Progress(StrictModel):
     answers: list[Answer] = Field(max_length=99)
     completed: bool = False
     attemptId: Optional[UUID] = None
+    activeSeconds: int = Field(default=0, ge=0, le=604800, strict=True)
 
 
 class Closing(StrictModel):
@@ -79,6 +87,8 @@ class Database:
             for statement in (ROOT / 'schema.sql').read_text().split(';'):
                 if statement.strip():
                     db.execute(statement)
+            if 'active_seconds' not in {row['name'] for row in db.execute('PRAGMA table_info(participants)').fetchall()}:
+                db.execute('ALTER TABLE participants ADD COLUMN active_seconds INTEGER NOT NULL DEFAULT 0 CHECK (active_seconds BETWEEN 0 AND 604800)')
 
     @contextmanager
     def connect(self):
@@ -109,6 +119,7 @@ def create_app(database_url=None, now=None, rate_secret=None):
     production = os.getenv('PORTAL_ENV') == 'production'
     database_url = database_url or os.getenv('DATABASE_URL') or str(ROOT / 'data/portal.sqlite3')
     origin = os.getenv('PORTAL_ORIGIN', 'http://127.0.0.1:4180').rstrip('/')
+    allowed_origins = {origin, *[value.strip().rstrip('/') for value in os.getenv('PORTAL_ALLOWED_ORIGINS', '').split(',') if value.strip()]}
     player_origin = os.getenv('PLAYER_ORIGIN', 'https://seemaths.org').rstrip('/')
     secret = rate_secret or os.getenv('PORTAL_RATE_SECRET')
     cron_secret = os.getenv('PORTAL_CRON_SECRET', '')
@@ -167,13 +178,13 @@ def create_app(database_url=None, now=None, rate_secret=None):
         answers = json.loads(row['answers'])
         return dict(id=row['id'], number=row['number'], startedAt=row['started_at'], updatedAt=row['updated_at'],
                     completedAt=row['completed_at'], revision=row['revision'], answers=answers,
-                    answered=len(answers), correct=sum(a['correct'] is True for a in answers), attemptId=row['attempt_id'])
+                    answered=sum(not a.get('skipped') or a.get('correct') is not None for a in answers), correct=sum(a['correct'] is True for a in answers), attemptId=row['attempt_id'], activeSeconds=row['active_seconds'])
 
     @app.middleware('http')
     async def protection(request: Request, call_next):
         # Bound streamed requests too; Content-Length alone is not an effective limit.
         if request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
-            if request.headers.get('origin') and request.headers['origin'] != origin:
+            if request.headers.get('origin') and request.headers['origin'] not in allowed_origins:
                 return JSONResponse({'detail': 'This request came from another site.'}, status_code=403)
             body = bytearray()
             async for chunk in request.stream():
@@ -196,14 +207,18 @@ def create_app(database_url=None, now=None, rate_secret=None):
     def config():
         return {'playerOrigin': player_origin, 'lifetimeDays': 7, 'maxParticipants': 100}
 
-    @app.post('/api/assignments', status_code=201)
-    def create(recipe: Recipe, request: Request):
+    def create_record(recipe, request, identifier=None, expose_management=True):
         cleanup()
-        identifier, credential = str(uuid4()), secrets.token_urlsafe(32)
+        identifier, credential = identifier or str(uuid4()), secrets.token_urlsafe(32)
         # Numeric references are labels, never authorization credentials.
         reference = f'{secrets.randbelow(100_000_000):08d}'
         created = current_time()
         with db.connect() as tx:
+            if db.postgres:
+                tx.execute('SELECT pg_advisory_xact_lock(742001)')
+            if not expose_management and tx.execute('SELECT id FROM assignments WHERE id=?', (identifier,)).fetchone():
+                rate(tx, 'resolve:'+peer(request), 300, 3600)
+                return public(assignment(tx, identifier))
             rate(tx, 'create:'+peer(request), 30, 3600)
             rate(tx, 'global-create', 200, 3600)
             if db.postgres:
@@ -213,9 +228,20 @@ def create_app(database_url=None, now=None, rate_secret=None):
             while tx.execute('SELECT id FROM assignments WHERE reference=?', (reference,)).fetchone():
                 reference = f'{secrets.randbelow(100_000_000):08d}'
             tx.execute('INSERT INTO assignments(id,reference,management_hash,recipe,created_at,expires_at) VALUES (?,?,?,?,?,?)',
-                       (identifier, reference, digest(credential), recipe.model_dump_json(), created, created+WEEK))
+                       (identifier, reference, digest(credential), recipe.model_dump_json(exclude_none=True), created, created+WEEK))
             result = public(assignment(tx, identifier))
-        return {**result, 'managementToken': credential}
+        return {**result, **({'managementToken': credential} if expose_management else {})}
+
+    @app.post('/api/assignments', status_code=201)
+    def create(recipe: Recipe, request: Request):
+        return create_record(recipe, request)
+
+    @app.post('/api/assignments/resolve')
+    def resolve(recipe: Recipe, request: Request):
+        # Legacy /play recipe links have no assignment UUID. One recipe/blueprint
+        # resolves to one server-allocated assignment, never a teacher credential.
+        identifier = str(uuid5(NAMESPACE_URL, 'seemaths:activity:'+json.dumps(recipe.model_dump(), sort_keys=True)))
+        return create_record(recipe, request, identifier, expose_management=False)
 
     @app.get('/api/assignments')
     def search(request: Request, q: str = '', offset: int = 0):
@@ -289,11 +315,11 @@ def create_app(database_url=None, now=None, rate_secret=None):
             if student['attempt_id'] and body.attemptId and str(body.attemptId) != student['attempt_id'] and not student['completed_at']:
                 raise HTTPException(409, 'This student number already has a saved activity. Continue in the original browser, or start as another student.')
             # A conditional UPDATE also protects against simultaneous requests on PostgreSQL.
-            tx.execute('UPDATE participants SET answers=?,revision=?,updated_at=?,completed_at=?,attempt_id=? '
+            tx.execute('UPDATE participants SET answers=?,revision=?,updated_at=?,completed_at=?,attempt_id=?,active_seconds=CASE WHEN active_seconds>? THEN active_seconds ELSE ? END '
                        'WHERE id=? AND revision<? AND completed_at IS NULL',
                        (json.dumps([a.model_dump() for a in body.answers], separators=(',', ':')), body.revision,
                         current_time(), current_time() if body.completed else None,
-                        str(body.attemptId) if body.attemptId else student['attempt_id'], student['id'], body.revision))
+                        str(body.attemptId) if body.attemptId else student['attempt_id'], body.activeSeconds, body.activeSeconds, student['id'], body.revision))
             return participant(tx.execute('SELECT * FROM participants WHERE id=?', (student['id'],)).fetchone())
 
     @app.get('/api/assignments/{assignment_id}/manage')
@@ -330,9 +356,15 @@ def create_app(database_url=None, now=None, rate_secret=None):
 
     app.mount('/assets', StaticFiles(directory=ROOT / 'static'), name='assets')
 
+    @app.get('/a/{assignment_id}')
+    def open_student(assignment_id: UUID):
+        with db.connect() as tx:
+            row = assignment(tx, assignment_id)
+            recipe = json.loads(row['recipe'])
+        return RedirectResponse('/play?' + urlencode({**recipe, 'assignment': str(assignment_id)}))
+
     @app.get('/')
     @app.get('/assignments')
-    @app.get('/a/{assignment_id}')
     @app.get('/manage/{assignment_id}')
     def page(assignment_id: Optional[str] = None):
         return FileResponse(ROOT / 'static/index.html')

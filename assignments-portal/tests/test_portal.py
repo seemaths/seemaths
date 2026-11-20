@@ -84,6 +84,24 @@ def test_another_device_cannot_replace_an_in_progress_paper(portal):
     body = {'revision': 1, 'answers': [{'index': 1, 'correct': True}], 'attemptId': str(uuid4())}
     assert client.put(path, json=body, headers=auth).status_code == 200
     assert client.put(path, json={**body, 'revision': 2, 'attemptId': str(uuid4()), 'answers': []}, headers=auth).status_code == 409
+
+
+def test_help_skip_and_active_time_are_saved_without_time_going_backwards(portal):
+    client, _, _ = portal
+    item = assignment(client)
+    learner, auth = student(client, item)
+    path = f"/api/assignments/{item['id']}/students/{learner['id']}"
+    body = {'revision': 1, 'activeSeconds': 300, 'answers': [
+        {'index': 1, 'correct': True, 'helped': True, 'checks': 1},
+        {'index': 2, 'correct': None, 'skipped': True},
+    ]}
+    response = client.put(path, json=body, headers=auth)
+    assert response.status_code == 200
+    assert response.json()['activeSeconds'] == 300
+    assert response.json()['answers'][0]['helped'] is True
+    assert response.json()['answers'][1]['skipped'] is True
+    assert client.put(path, json={**body, 'revision': 2, 'activeSeconds': 20}, headers=auth).json()['activeSeconds'] == 300
+    assert client.put(path, json={**body, 'revision': 3, 'activeSeconds': -1}, headers=auth).status_code == 422
     assert client.get(path, headers=auth).json()['answered'] == 1
 
 
@@ -163,3 +181,25 @@ def test_page_headers_and_search(portal):
     assert page.headers['referrer-policy'] == 'no-referrer'
     assert "frame-ancestors 'none'" in page.headers['content-security-policy']
     assert 'managementToken' not in page.text
+
+
+def test_plain_activity_links_resolve_one_assignment_without_management_access(portal):
+    client, _, _ = portal
+    recipe = {'topic':'geometry,number', 'count':3, 'blueprint':'test-blueprint'}
+    first = client.post('/api/assignments/resolve', json=recipe)
+    second = client.post('/api/assignments/resolve', json=recipe)
+    assert first.status_code == 200
+    assert first.json()['id'] == second.json()['id']
+    assert 'managementToken' not in first.json()
+    different = client.post('/api/assignments/resolve', json={**recipe,'blueprint':'different-blueprint'})
+    assert different.json()['id'] != first.json()['id']
+
+
+def test_student_link_opens_questions_without_an_intermediate_page(portal):
+    client, _, _ = portal
+    item = assignment(client, blueprint='shared-blueprint')
+    response = client.get('/a/'+item['id'], follow_redirects=False)
+    assert response.status_code == 307
+    assert response.headers['location'].startswith('/play?')
+    assert 'assignment='+item['id'] in response.headers['location']
+    assert 'blueprint=shared-blueprint' in response.headers['location']

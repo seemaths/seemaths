@@ -172,7 +172,7 @@
     }
     $('open-activity').disabled = true;
     $('copy-link').disabled = true;
-    $('open-activity-label').textContent = 'Start practice';
+    $('open-activity-label').textContent = 'Self Study';
     $('activity-link').value = '';
     $('activity-summary').textContent = '';
     $('status').textContent = '';
@@ -201,7 +201,6 @@
   window.addEventListener('pageshow', freshHome);
 
   const topics = {algebra:'Algebra', arithmetic:'Arithmetic', geometry:'Geometry', measurement:'Measurement', statistics:'Statistics', random:'Mixed'};
-  const modes = {practice:'Start practice', exam:'Start exam', workbook:'Open workbook', solutions:'Open solutions'};
   function reveal(id) {
     const section = $(id);
     if (!section.hidden) return;
@@ -261,15 +260,14 @@
   function activityUrl() {
     const params = new URLSearchParams({topic, mode, count:String(bounded($('question-count'),20)), levelMin:$('level-min').value, levelMax:$('level-max').value, blueprint});
     if (mode === 'exam') params.set('minutes', String(bounded($('exam-minutes'),30)));
-    return `https://seemaths.org/play?${params}`;
+    const url = new URL('/play', location.origin);
+    url.search = params.toString();
+    return url.href;
   }
   function update() {
     if (!topic || !mode) return;
     $('duration-setting').hidden = mode !== 'exam';
-    $('open-activity-label').textContent = modes[mode];
-    const modeIcon = document.querySelector(`[data-mode="${mode}"] .mode-icon svg`).cloneNode(true);
-    modeIcon.setAttribute('aria-hidden', 'true');
-    $('open-activity').querySelector('svg').replaceWith(modeIcon);
+    $('open-activity-label').textContent = 'Self Study';
     $('activity-link').value = activityUrl();
     const count = bounded($('question-count'),20);
     const min = $('level-min').value, max = $('level-max').value;
@@ -330,9 +328,38 @@
   $('exam-minutes').addEventListener('change', () => followSelection($('exam-minutes'), document.querySelector('.actions')));
   document.querySelectorAll('[data-minutes]').forEach(button => button.addEventListener('click', () => { $('exam-minutes').value = button.dataset.minutes; update(); followSelection(button, document.querySelector('.actions')); }));
   $('activity-link').addEventListener('click', event => event.target.select());
+  const sharedAssignments = new Map();
+  async function assignmentLink() {
+    const exercise = activityUrl();
+    if (!['practice', 'exam'].includes(mode)) return exercise;
+    let assignment = sharedAssignments.get(exercise);
+    if (!assignment) {
+      const params = new URL(exercise).searchParams;
+      const recipe = Object.fromEntries(params);
+      for (const key of ['count','levelMin','levelMax','minutes']) if (key in recipe) recipe[key] = Number(recipe[key]);
+      const response = await fetch('/api/assignments', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(recipe)});
+      const data = await response.json();
+      if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Could not create the assignment.');
+      assignment = data;
+      const storageKey = 'seemaths.assignments.managed.v1';
+      let existing = [];
+      try { existing = JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch {}
+      localStorage.setItem(storageKey, JSON.stringify([{id:data.id,key:data.managementToken,reference:data.reference,recipe:data.recipe,expiresAt:data.expiresAt}, ...existing.filter(a => a.id !== data.id)]));
+      sharedAssignments.set(exercise, assignment);
+    }
+    let manage = document.getElementById('manage-assignment');
+    if (!manage) { manage = document.createElement('a'); manage.id = 'manage-assignment'; manage.textContent = 'Manage assignment'; manage.className = 'assignment-management-link'; $('finish-step').append(manage); }
+    manage.href = `/manage/${assignment.id}#key=${encodeURIComponent(assignment.managementToken)}`;
+    manage.title = 'Private teacher dashboard — keep this link';
+    const url = new URL(exercise); url.searchParams.set('assignment', assignment.id); return url.href;
+  }
   $('copy-link').addEventListener('click', async () => {
     if (!validate(true)) return;
-    const url = activityUrl();
+    const button = $('copy-link'); button.disabled = true;
+    let url;
+    try { url = await assignmentLink(); }
+    catch (error) { $('status').textContent = error.message; button.disabled = false; return; }
+    button.disabled = false;
     $('activity-link').value = url;
     try {
       if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
@@ -348,9 +375,6 @@
   form.addEventListener('submit', event => {
     event.preventDefault();
     if (!validate(true)) return;
-    const url = new URL(activityUrl());
-    // Keep local previews local; shared links always use the public See Maths domain.
-    if (['localhost','127.0.0.1','::1'].includes(location.hostname)) url.host = location.host, url.protocol = location.protocol;
-    location.assign(url.href);
+    location.assign(activityUrl());
   });
 })();
