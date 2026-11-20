@@ -30,7 +30,7 @@ not automatically loaded: export variables or use the host's environment setting
 - Atomic student-number allocation, max 100 per assignment; idempotent join retries.
 - Private student credential and resume link; no credential sent to the maths iframe.
 - Dashboard: answered/checked/correct, per-question cells, completion, last sync,
-  20-second refresh only while visible, manual refresh and numeric CSV export.
+  manual refresh and numeric CSV export; no dashboard polling.
 - Close/reopen joining without interrupting existing participants; permanent deletion
   cascades to all associated progress.
 - One current progress snapshot per student. Revision checks handle retries and
@@ -155,3 +155,7 @@ not a substitute for the Quode questions and not part of production routing.
 This module is part of the MIT-licensed SeeMaths repository. See the repository
 README for ownership and contribution instructions. Provisioning the database
 is separate from deploying this application and connecting the live player.
+
+Teacher numbers are eight-digit public labels, backed by a browser-generated UUID whose hash is stored only on active assignment rows. `/assignments?teacher=12345678` recovers the active list and read-only progress. Editing and deletion still require private management keys. Teacher labels expire with their last seven-day assignment; no separate teacher table is retained.
+
+Student progress is sent on local question-save events, Help Me, navigation, and leaving the activity. There is no timer-based sync or realtime subscription. Identical question snapshots are suppressed; elapsed time is included with events. Offline pending snapshots retry when connectivity returns or on the next activity event.

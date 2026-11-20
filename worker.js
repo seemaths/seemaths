@@ -38,7 +38,7 @@ export default {
     }
     const mathspaceHost = incoming.hostname === MATHSPACE_HOST;
     const arcadeHost = incoming.hostname === ARCADE_HOST;
-    const portalPath = /^\/api\/assignments(?:\/|$)/.test(incoming.pathname)
+    const portalPath = /^\/api\/(?:assignments|teachers)(?:\/|$)/.test(incoming.pathname)
       || /^\/(?:manage|a)(?:\/|$)/.test(incoming.pathname)
       || incoming.pathname === '/assignments' || incoming.pathname === '/api/config'
       || incoming.pathname.startsWith('/assets/');
@@ -90,9 +90,17 @@ export default {
     let body = response.body;
     if (response.ok && /^\/play\/?$/.test(publicPath) && response.headers.get('Content-Type')?.includes('text/html')) {
       body = (await response.text())
-        .replace(/(<script\s+type="module"\s+src=")\/runtime\/seemaths-player\.js(\")/, env.ASSIGNMENTS_ORIGIN ? '$1/student-player.js?v=2$2' : '$&')
+        .replace(/(<script\s+type="module"\s+src=")\/runtime\/seemaths-player\.js(\")/, env.ASSIGNMENTS_ORIGIN ? '$1/student-player.js?v=3$2' : '$&')
         .replace('<p role="status">Opening your activity…</p>', '<div class="seemaths-opening"><div class="paper-loading-progress"><div class="paper-progress-track paper-progress-indeterminate" role="progressbar" aria-label="Loading activity"><div class="paper-progress-fill"></div></div></div></div>')
         .replace('</head>', '<link rel="stylesheet" href="/student-session.css?v=2"></head>');
+      responseHeaders.delete('Content-Length');
+      responseHeaders.delete('Content-Encoding');
+      responseHeaders.set('Cache-Control', 'no-store');
+    } else if (env.ASSIGNMENTS_ORIGIN && response.ok && publicPath === '/runtime/seemaths-attempts.js') {
+      body = (await response.text()).replace(
+        "export const putAttempt = attempt => transaction('readwrite', store => store.put(cloneData({...attempt, updatedAt:Date.now()})));",
+        "export const putAttempt = attempt => transaction('readwrite', store => store.put(cloneData({...attempt, updatedAt:Date.now()}))).then(value => { window.dispatchEvent(new CustomEvent('seemaths:attempt-saved', {detail:{id:attempt.id}})); return value; });"
+      );
       responseHeaders.delete('Content-Length');
       responseHeaders.delete('Content-Encoding');
       responseHeaders.set('Cache-Control', 'no-store');

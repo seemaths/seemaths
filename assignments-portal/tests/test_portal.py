@@ -203,3 +203,41 @@ def test_student_link_opens_questions_without_an_intermediate_page(portal):
     assert response.headers['location'].startswith('/play?')
     assert 'assignment='+item['id'] in response.headers['location']
     assert 'blueprint=shared-blueprint' in response.headers['location']
+
+
+def test_teacher_number_recovers_public_progress_but_never_write_access(portal):
+    client, _, _ = portal
+    identity = {'X-Teacher-Id': str(uuid4())}
+    first = client.post('/api/assignments', json={'count': 3}, headers=identity).json()
+    second = client.post('/api/assignments', json={'count': 3}, headers=identity).json()
+    number = first['teacherNumber']
+    assert len(number) == 8 and number.isdigit()
+    assert second['teacherNumber'] == number
+    rows = client.get(f'/api/teachers/{number}').json()['assignments']
+    assert {r['id'] for r in rows} == {first['id'], second['id']}
+    assert 'managementToken' not in str(rows) and 'teacher_hash' not in str(rows)
+    child, _ = student(client, first)
+    path = f"/api/assignments/{first['id']}/manage?teacher={number}"
+    assert client.get(path).json()['students'][0]['number'] == child['number']
+    assert client.patch(path, json={'closed': True}).status_code == 403
+    assert client.delete(path).status_code == 403
+    assert client.get(path.replace(number, 'not-a-number')).status_code == 403
+
+
+def test_existing_assignment_can_only_be_attached_with_management_key(portal):
+    client, _, _ = portal
+    item = assignment(client)
+    path = f"/api/assignments/{item['id']}/teacher"
+    identity = {'X-Teacher-Id': str(uuid4())}
+    assert client.post(path, headers=identity).status_code == 403
+    result = client.post(path, headers={**identity, **manage(item)})
+    assert result.status_code == 200
+    assert result.json()['teacherNumber']
+    assert client.post(path, headers={'X-Teacher-Id': str(uuid4()), **manage(item)}).status_code == 409
+
+
+def test_teacher_records_expire_with_assignments(portal):
+    client, now, _ = portal
+    item = client.post('/api/assignments', json={}, headers={'X-Teacher-Id': str(uuid4())}).json()
+    now[0] += WEEK + 1
+    assert client.get(f"/api/teachers/{item['teacherNumber']}").json()['assignments'] == []

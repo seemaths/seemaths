@@ -330,6 +330,7 @@
   $('activity-link').addEventListener('click', event => event.target.select());
   const sharedAssignments = new Map();
   async function assignmentLink() {
+    await window.seemathsTeacherReady;
     const exercise = activityUrl();
     if (!['practice', 'exam'].includes(mode)) return exercise;
     let assignment = sharedAssignments.get(exercise);
@@ -337,21 +338,22 @@
       const params = new URL(exercise).searchParams;
       const recipe = Object.fromEntries(params);
       for (const key of ['count','levelMin','levelMax','minutes']) if (key in recipe) recipe[key] = Number(recipe[key]);
-      const response = await fetch('/api/assignments', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(recipe)});
+      const response = await fetch('/api/assignments', {method:'POST', headers:{'Content-Type':'application/json',...window.seemathsTeacher.headers()}, body:JSON.stringify(recipe)});
       const data = await response.json();
       if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Could not create the assignment.');
       assignment = data;
       const storageKey = 'seemaths.assignments.managed.v1';
       let existing = [];
       try { existing = JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch {}
-      localStorage.setItem(storageKey, JSON.stringify([{id:data.id,key:data.managementToken,reference:data.reference,recipe:data.recipe,expiresAt:data.expiresAt}, ...existing.filter(a => a.id !== data.id)]));
+      localStorage.setItem(storageKey, JSON.stringify([{id:data.id,key:data.managementToken,teacherNumber:data.teacherNumber,reference:data.reference,recipe:data.recipe,expiresAt:data.expiresAt}, ...existing.filter(a => a.id !== data.id)]));
+      await window.seemathsTeacher.registered(data);
       sharedAssignments.set(exercise, assignment);
     }
     let manage = document.getElementById('manage-assignment');
     if (!manage) { manage = document.createElement('a'); manage.id = 'manage-assignment'; manage.textContent = 'Manage assignment'; manage.className = 'assignment-management-link'; $('finish-step').append(manage); }
-    manage.href = `/manage/${assignment.id}#key=${encodeURIComponent(assignment.managementToken)}`;
+    manage.href = `/manage/${assignment.id}?teacher=${assignment.teacherNumber}#key=${encodeURIComponent(assignment.managementToken)}`;
     manage.title = 'Private teacher dashboard — keep this link';
-    const url = new URL(exercise); url.searchParams.set('assignment', assignment.id); return url.href;
+    const url = new URL(exercise); url.searchParams.set('assignment', assignment.id); if(assignment.teacherNumber)url.searchParams.set('teacher',assignment.teacherNumber); return url.href;
   }
   $('copy-link').addEventListener('click', async () => {
     if (!validate(true)) return;
