@@ -15,7 +15,7 @@
     badge.innerHTML=`<span>Teacher Id</span><strong>${n}</strong>`;
     badge.title='Copy Teacher Id';badge.onclick=async()=>{try{await navigator.clipboard.writeText(n);badge.title='Teacher Id copied';badge.setAttribute('aria-label',`Teacher Id ${n} copied`);}catch{window.prompt('Copy Teacher Id',n);}};
     const masthead=document.querySelector('.masthead');
-    if(masthead){let link=document.getElementById('teacher-assignments');if(!link){link=document.createElement('a');link.id='teacher-assignments';link.className='teacher-assignments';masthead.insertBefore(link,masthead.querySelector('.player-links'));}link.textContent=`${assignments.length} Assignments`;link.href=`/assignments?teacher=${n}`;}
+    if(masthead){let link=document.getElementById('teacher-assignments');if(!link){link=document.createElement('a');link.id='teacher-assignments';link.className='teacher-assignments';masthead.insertBefore(link,masthead.querySelector('.player-links, nav'));}link.textContent=`${assignments.length} Assignments`;link.href=`/assignments?teacher=${n}`;}
   }
   async function registered(a){
     if(a.teacherNumber){identity.number=a.teacherNumber;persist();}
