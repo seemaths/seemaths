@@ -40,6 +40,8 @@ The real bridge ran against a clearly labelled local test-player fixture, not th
 live player. Mobile builder/dashboard widths were checked at 390 CSS px, with no
 document overflow. Screenshots are local ignored artifacts.
 
-The live player has not been connected, Supabase has not been provisioned/tested,
-and this module has not been deployed. Exact question/working restoration across
-devices is intentionally outside the browser-only storage model.
+The dedicated SeeMaths Supabase project is provisioned, both migrations are
+installed, and real PostgreSQL API checks passed with a dedicated server role.
+The live player has not been connected and this module has not been deployed.
+Exact question/working restoration across devices remains outside the
+browser-only storage model.
