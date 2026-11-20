@@ -190,7 +190,7 @@ function errorPage(error) {
   document.querySelector("#retry").onclick = () => location.reload();
 }
 function listItem(item, managed = false) {
-  return `<a class="assignment-item" href="${managed ? `/manage/${item.id}?teacher=${item.teacherNumber || ""}` : `/a/${item.id}`}"><div class="item-top"><h3>${escape(topicLabel(item.recipe.topic))}</h3><span class="pill ${item.closed ? "closed" : ""}">${item.closed ? "Closed" : item.recipe.mode === "exam" ? "Exam" : "Practice"}</span></div><p class="reference">${ref(item.reference)}</p>${item.teacherNumber ? `<p class="small">Teacher Id ${escape(item.teacherNumber)}</p>` : ""}<p>${item.recipe.count} questions · Levels ${item.recipe.levelMin}–${item.recipe.levelMax}</p><p class="small">Expires ${date(item.expiresAt)}</p></a>`;
+  return `<a class="assignment-item" href="${managed ? `/manage/${item.id}?teacher=${item.teacherNumber || ""}` : `/a/${item.id}`}" title="${escape(topicLabel(item.recipe.topic))}"><h3>${escape(topicLabel(item.recipe.topic))}</h3><span class="reference">${ref(item.reference)}</span>${item.teacherNumber ? `<span>Teacher Id ${escape(item.teacherNumber)}</span>` : '<span>Teacher Id —</span>'}<span>${item.recipe.count} questions</span><span>Levels ${item.recipe.levelMin}–${item.recipe.levelMax}</span><span>Expires ${date(item.expiresAt)}</span><span class="pill ${item.closed ? "closed" : ""}">${item.closed ? "Closed" : item.recipe.mode === "exam" ? "Exam" : "Practice"}</span></a>`;
 }
 function setNav(name) {
   document
