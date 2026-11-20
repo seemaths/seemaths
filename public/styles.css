@@ -97,3 +97,15 @@ body{position:relative;min-height:100svh}
 .player-link-arcade{color:#226b55;background:#e4f2eb}.player-link-arcade:hover{background:#d2e9dd;border-color:#a5ceba}
 @media(max-width:680px){.masthead{flex-wrap:wrap;gap:18px}.player-links{width:100%;padding-top:0;gap:8px}.player-link{flex:1;padding:10px 12px;font-size:13px;border-radius:12px;gap:7px}.player-link svg{width:20px;height:20px}}
 @media(prefers-reduced-motion:reduce){.player-link{transition:none}}
+
+/* Activity controls: two plain sliders, then two stacked text actions. */
+.settings-grid{grid-template-columns:minmax(0,1fr);gap:32px}
+.range:focus-visible{outline:0;box-shadow:none}
+.range:focus-visible::-webkit-slider-thumb{background:var(--teal-dark)}
+.range:focus-visible::-moz-range-thumb{background:var(--teal-dark)}
+.actions{flex-direction:column;align-items:center;gap:14px}
+.actions .primary-button,.actions .copy-button{flex:0 0 auto;width:min(100%,320px);border:0;justify-content:center}
+.actions .copy-button{background:#e6f1ef;color:var(--teal-dark)}
+.actions .copy-button:hover{background:#d9eae6}
+.assignment-management-link{display:block;width:fit-content;margin:18px auto 0;color:var(--teal-dark);font-size:15px;font-weight:650;text-decoration:none}
+.assignment-management-link:hover{text-decoration:underline}

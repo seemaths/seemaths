@@ -8,6 +8,7 @@ const topics = {
   number: "Number",
   statistics: "Statistics",
 };
+const topicLabel = value => value.split(",").map(topic => topics[topic] || topic).join(", ");
 const mineKey = "seemaths.assignments.managed.v1";
 const studentKey = (id) => `seemaths.assignments.student.v1.${id}`;
 let config,
@@ -44,7 +45,7 @@ const ago = (timestamp) => {
       ? `${Math.floor(seconds / 60)} min ago`
       : `${Math.floor(seconds / 3600)} hr ago`;
 };
-const studentNumber = (number) => String(number).padStart(2, "0");
+const studentNumber = (number) => String(number).padStart(4, "0");
 const recipeSummary = (recipe) =>
   `${recipe.count} questions · ${recipe.mode === "exam" ? "Exam" : "Practice"} · Levels ${recipe.levelMin}–${recipe.levelMax}`;
 const privateURL = (id, key) =>
@@ -189,7 +190,7 @@ function errorPage(error) {
   document.querySelector("#retry").onclick = () => location.reload();
 }
 function listItem(item, managed = false) {
-  return `<a class="assignment-item" href="${managed ? `/manage/${item.id}` : `/a/${item.id}`}"><div class="item-top"><h3>${escape(topics[item.recipe.topic])}</h3><span class="pill ${item.closed ? "closed" : ""}">${item.closed ? "Closed" : item.recipe.mode === "exam" ? "Exam" : "Practice"}</span></div><p class="reference">${ref(item.reference)}</p><p>${item.recipe.count} questions · Levels ${item.recipe.levelMin}–${item.recipe.levelMax}</p><p class="small">Expires ${date(item.expiresAt)}</p></a>`;
+  return `<a class="assignment-item" href="${managed ? `/manage/${item.id}` : `/a/${item.id}`}"><div class="item-top"><h3>${escape(topicLabel(item.recipe.topic))}</h3><span class="pill ${item.closed ? "closed" : ""}">${item.closed ? "Closed" : item.recipe.mode === "exam" ? "Exam" : "Practice"}</span></div><p class="reference">${ref(item.reference)}</p><p>${item.recipe.count} questions · Levels ${item.recipe.levelMin}–${item.recipe.levelMax}</p><p class="small">Expires ${date(item.expiresAt)}</p></a>`;
 }
 function setNav(name) {
   document
@@ -332,42 +333,29 @@ async function dashboard(id) {
   else
     toast("Browser storage is unavailable. Save your private management link.");
   setNav("mine");
-  root.innerHTML = `<a class="back-link" href="/assignments">My assignments</a><div class="dashboard-heading"><p class="eyebrow">Assignment <span class="reference">${ref(assignment.reference)}</span></p><h1>${topics[assignment.recipe.topic]}</h1><div class="heading-meta"><span>${assignment.recipe.count} questions</span><span>${assignment.recipe.mode === "exam" ? "Exam" : "Practice"}</span><span>Levels ${assignment.recipe.levelMin}–${assignment.recipe.levelMax}</span><span>Expires ${expiryDate(assignment.expiresAt)}</span></div></div>
+  root.innerHTML = `<a class="back-link" href="/assignments">My assignments</a><div class="dashboard-heading"><p class="eyebrow">Assignment <span class="reference">${ref(assignment.reference)}</span></p><h1>${topicLabel(assignment.recipe.topic)}</h1><div class="heading-meta"><span>${assignment.recipe.count} questions</span><span>${assignment.recipe.mode === "exam" ? "Exam" : "Practice"}</span><span>Levels ${assignment.recipe.levelMin}–${assignment.recipe.levelMax}</span><span>Expires ${expiryDate(assignment.expiresAt)}</span></div></div>
   ${newlyCreated ? '<p class="notice" id="created-notice">Your assignment is ready. Share the student link, and save your private management link to return from another browser.</p><div class="divider"></div>' : ""}
   <section class="share-panel"><div><h2>Share this assignment</h2><p>Students tell you their number. Their names stay with you.</p></div><div class="actions"><button class="primary" id="copy-student">Copy student link</button><button class="secondary" id="copy-management">Copy management link</button><button class="secondary" id="save-link" aria-label="Download private management link">Save link</button></div></section>
-  <div class="stats"><div class="stat"><strong id="started-stat">0</strong><span>Started</span></div><div class="stat"><strong id="completed-stat">0</strong><span>Completed</span></div><div class="stat"><strong id="accuracy-stat">—</strong><span>Correct / checked</span></div></div>
-  <section class="panel students-panel"><div class="students-toolbar"><h2>Student progress</h2><div class="actions"><span class="muted" id="last-sync">Updating…</span><button class="quiet" id="refresh">Refresh</button></div></div><div id="students"></div><div class="question-legend"><span><i class="legend-square correct"></i>Correct</span><span><i class="legend-square incorrect"></i>Incorrect</span><span><i class="legend-square unanswered"></i>Not checked</span></div></section>
+  <section class="panel students-panel"><div class="students-toolbar"><h2>Student progress</h2><div class="actions"><span class="muted" id="last-sync">Updating…</span><button class="quiet" id="refresh">Refresh</button></div></div><div id="students"></div></section>
   <div class="dashboard-footer"><p>Progress and assignments expire together after 7 days.</p><div class="actions"><button class="secondary" id="export-results">Download results</button><button class="secondary" id="close-assignment">Close joining</button><button class="danger" id="delete-assignment">Delete</button></div></div><p class="error-text" id="dashboard-error" role="alert"></p>`;
   let latest = assignment,
     busy = false;
   function render(data) {
     latest = data;
-    const completed = data.students.filter((s) => s.completedAt).length;
-    const answers = data.students
-        .flatMap((s) => s.answers)
-        .filter((a) => typeof a.correct === "boolean"),
-      correct = answers.filter((a) => a.correct).length;
-    document.querySelector("#started-stat").textContent = data.students.length;
-    document.querySelector("#completed-stat").textContent = completed;
-    document.querySelector("#accuracy-stat").textContent = answers.length
-      ? `${Math.round((correct / answers.length) * 100)}%`
-      : "—";
     document.querySelector("#close-assignment").textContent = data.closed
       ? "Reopen joining"
       : "Close joining";
     document.querySelector("#students").innerHTML = data.students.length
-      ? `<div class="table-wrap"><table><thead><tr><th>Student</th><th>Progress</th><th>Correct</th><th>Questions</th><th>Last synced</th></tr></thead><tbody>${data.students
-          .map(
-            (s) =>
-              `<tr><td><span class="student-number">Student ${studentNumber(s.number)}</span><br><span class="pill ${s.completedAt ? "complete" : "progress"}">${s.completedAt ? "Completed" : "In progress"}</span></td><td class="progress-cell">${s.answered} / ${data.recipe.count}<progress value="${s.answered}" max="${data.recipe.count}" aria-label="Student ${s.number}: ${s.answered} of ${data.recipe.count} answered"></progress></td><td>${s.correct} / ${s.answers.filter((a) => typeof a.correct === "boolean").length}</td><td><div class="row-detail">${Array.from(
-                { length: data.recipe.count },
-                (_, i) => {
-                  const a = s.answers.find((a) => a.index === i + 1);
-                  return `<span class="question-dot ${a?.correct === true ? "correct" : a?.correct === false ? "incorrect" : ""}" title="Question ${i + 1}: ${a?.correct === true ? "correct" : a?.correct === false ? "incorrect" : a ? "answered, not checked" : "not answered"}">${i + 1}</span>`;
-                },
-              ).join("")}</div></td><td>${ago(s.updatedAt)}</td></tr>`,
-          )
-          .join("")}</tbody></table></div>`
+      ? `<div class="student-progress-list">${data.students.map(s => {
+          const minutes = Math.floor((s.activeSeconds || 0) / 60);
+          const duration = minutes ? `${minutes} ${minutes === 1 ? 'min' : 'mins'}` : s.activeSeconds ? '<1 min' : '0 mins';
+          return `<div class="student-progress-row"><span class="student-number">${studentNumber(s.number)}</span><div class="student-progress-dots" aria-label="Question progress">${Array.from({length:data.recipe.count},(_,index) => {
+            const answer=s.answers.find(a=>a.index===index+1);
+            const state=answer?.correct===true ? (answer.helped || answer.checks>1 ? 'helped' : 'first') : answer?.skipped ? 'skipped' : 'untried';
+            const label=state==='first'?'Correct first try':state==='helped'?(answer.helped?'Correct with Help Me':'Correct after retry'):state==='skipped'?'Skipped':answer?'In progress':'Not tried';
+            return `<span class="progress-dot ${state}" role="img" aria-label="Question ${index+1}: ${label}" title="Question ${index+1}: ${label}"></span>`;
+          }).join('')}</div><span class="student-time" aria-label="Time spent">${escape(duration)}</span></div>`;
+        }).join('')}</div>`
       : `<div class="empty"><div class="empty-mark" aria-hidden="true">÷</div><h3>No students have started yet.</h3><p>${data.closed ? "Joining is closed. Reopen it to let students start." : "Share the student link. Progress will appear here as students work."}</p></div>`;
     document.querySelector("#last-sync").textContent = "Updated just now";
     document.querySelector("#dashboard-error").textContent = "";
@@ -477,7 +465,7 @@ async function student(id) {
       history.replaceState(null, "", location.pathname);
   }
   const introduction = () => {
-    root.innerHTML = `<section class="student-intro"><p class="eyebrow">Assignment ${ref(assignment.reference)}</p><h1>${topics[assignment.recipe.topic]}</h1><p class="muted">Your work has a number. You don’t need an account.</p><section class="panel"><div class="exercise-summary"><div><strong>${assignment.recipe.count}</strong><span>Questions</span></div><div><strong>${assignment.recipe.mode === "exam" ? "Exam" : "Practice"}</strong><span>${assignment.recipe.mode === "exam" ? assignment.recipe.minutes + " minutes" : "At your pace"}</span></div><div><strong>${assignment.recipe.levelMin}–${assignment.recipe.levelMax}</strong><span>Difficulty levels</span></div></div><p class="notice">When you start, tell your teacher your student number. Your progress is shared with whoever has the private management link.</p><div class="divider"></div><button class="primary" id="start" ${assignment.closed ? "disabled" : ""}>${assignment.closed ? "Closed to new students" : "Start assignment"}</button><p class="error-text" id="join-error" role="alert"></p><p class="private-note">Expires ${expiryDate(assignment.expiresAt)}. No names or emails are collected.</p></section></section>`;
+    root.innerHTML = `<section class="student-intro"><p class="eyebrow">Assignment ${ref(assignment.reference)}</p><h1>${topicLabel(assignment.recipe.topic)}</h1><p class="muted">Your work has a number. You don’t need an account.</p><section class="panel"><div class="exercise-summary"><div><strong>${assignment.recipe.count}</strong><span>Questions</span></div><div><strong>${assignment.recipe.mode === "exam" ? "Exam" : "Practice"}</strong><span>${assignment.recipe.mode === "exam" ? assignment.recipe.minutes + " minutes" : "At your pace"}</span></div><div><strong>${assignment.recipe.levelMin}–${assignment.recipe.levelMax}</strong><span>Difficulty levels</span></div></div><p class="notice">When you start, tell your teacher your student number. Your progress is shared with whoever has the private management link.</p><div class="divider"></div><button class="primary" id="start" ${assignment.closed ? "disabled" : ""}>${assignment.closed ? "Closed to new students" : "Start assignment"}</button><p class="error-text" id="join-error" role="alert"></p><p class="private-note">Expires ${expiryDate(assignment.expiresAt)}. No names or emails are collected.</p></section></section>`;
     document.querySelector("#start").onclick = async () => {
       const button = document.querySelector("#start");
       button.disabled = true;
@@ -521,7 +509,14 @@ async function student(id) {
       lastSignature = "",
       lastAck = initial.updatedAt;
     if (initial.completedAt) queue = null;
-    root.innerHTML = `<p class="eyebrow">Assignment ${ref(assignment.reference)} · ${topics[assignment.recipe.topic]}</p><section class="number-card"><div><strong>Student ${studentNumber(initial.number)}</strong><p>Tell your teacher this number.</p></div><button class="secondary" id="copy-resume">Copy resume link</button></section><div class="player-toolbar"><span class="sync-status" id="sync-status">${initial.completedAt ? "Assignment completed" : "Connecting to exercise…"}</span><div class="actions"><button class="quiet" id="retry-sync">Retry sync</button><button class="quiet" id="switch-student">Start as another student</button></div></div><p id="player-notice" class="notice warning" hidden></p><iframe id="exercise" title="${escape(topics[assignment.recipe.topic])} assignment" referrerpolicy="no-referrer" allow="fullscreen"></iframe>`;
+    document.body.classList.add("student-view");
+    const badge = document.createElement("div");
+    badge.className = "student-id";
+    badge.setAttribute("aria-label", `Student Id ${studentNumber(initial.number)}`);
+    badge.innerHTML = `<span>Student Id</span><strong>${studentNumber(initial.number)}</strong>`;
+    document.querySelector(".masthead .student-id")?.remove();
+    document.querySelector(".masthead").append(badge);
+    root.innerHTML = `<p class="eyebrow">Assignment ${ref(assignment.reference)} · ${topicLabel(assignment.recipe.topic)}</p><div class="player-toolbar"><span class="sync-status" id="sync-status">${initial.completedAt ? "Assignment completed" : "Connecting to exercise…"}</span><div class="actions"><button class="quiet" id="copy-resume">Copy resume link</button><button class="quiet" id="retry-sync">Retry sync</button><button class="quiet" id="switch-student">Start as another student</button></div></div><p id="player-notice" class="notice warning" hidden></p><iframe id="exercise" title="${escape(topicLabel(assignment.recipe.topic))} assignment" referrerpolicy="no-referrer" allow="fullscreen"></iframe>`;
     const frame = document.querySelector("#exercise"),
       status = document.querySelector("#sync-status"),
       notice = document.querySelector("#player-notice");
