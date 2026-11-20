@@ -98,8 +98,17 @@ body{position:relative;min-height:100svh}
 @media(max-width:680px){.masthead{flex-wrap:wrap;gap:18px}.player-links{width:100%;padding-top:0;gap:8px}.player-link{flex:1;padding:10px 12px;font-size:13px;border-radius:12px;gap:7px}.player-link svg{width:20px;height:20px}}
 @media(prefers-reduced-motion:reduce){.player-link{transition:none}}
 
-/* Activity controls: two plain sliders, then two stacked text actions. */
-.settings-grid{grid-template-columns:minmax(0,1fr);gap:32px}
+/* One controls row: Questions, Difficulty, then stacked study actions. */
+.activity-controls{display:grid;grid-template-columns:minmax(0,1fr) 230px;align-items:center;gap:32px;padding:24px 28px;background:#fff;border:1px solid #e8ecf4;border-radius:23px;margin-bottom:32px}
+.activity-controls:has(#settings-step[hidden]){display:none}
+.activity-controls .preferences{padding:0;margin:0;background:none;border:0;box-shadow:none;min-width:0}
+.activity-controls .settings-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:32px}
+.activity-controls .finish{margin:0;min-width:0}
+.activity-controls .actions{gap:12px}
+.activity-controls .actions button{width:100%;height:56px;min-height:56px;font-size:16px;padding:12px}
+.activity-controls .status{margin:8px 0 0;font-size:13px}
+@media(max-width:800px){.activity-controls{grid-template-columns:minmax(0,1fr);gap:24px;padding:22px 20px}.activity-controls .finish{width:min(100%,320px);justify-self:center}}
+@media(max-width:480px){.activity-controls .settings-grid{grid-template-columns:minmax(0,1fr);gap:24px}}
 .range:focus-visible{outline:0;box-shadow:none}
 .range:focus-visible::-webkit-slider-thumb{background:var(--teal-dark)}
 .range:focus-visible::-moz-range-thumb{background:var(--teal-dark)}
