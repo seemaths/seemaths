@@ -134,7 +134,10 @@ node --test tests/bridge.test.mjs
 API tests use disposable SQLite databases. They cover private access, scope,
 concurrent numbering, join retries, bounded schemas, revision/completion handling,
 closure/deletion, exact expiry and scheduled cleanup, limits and response headers.
-PostgreSQL/Supabase migrations and hosted routing have not yet been exercised.
+The dedicated SeeMaths Supabase project has both migrations installed. A real
+PostgreSQL check passed creation, joining, progress updates, private teacher
+access, closed joins and deletion using a dedicated application role. Hosted
+routing and the live player bridge remain to be verified.
 
 For an isolated browser check of the real bridge module:
 
