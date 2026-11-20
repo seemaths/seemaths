@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Assignments · See Maths</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+    <script type="module" src="/assets/app.js"></script>
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="brand" href="/assignments" aria-label="See Maths assignments"
+        ><span class="brand-symbol" aria-hidden="true">÷</span>See Maths<span
+          class="brand-section"
+          >Assignments</span
+        ></a
+      >
+      <nav aria-label="Main">
+        <a href="/assignments" id="nav-mine">My assignments</a
+        ><a href="/assignments?view=discover" id="nav-discover">Discover</a>
+      </nav>
+    </header>
+    <main id="app" tabindex="-1">
+      <p class="loading">Opening assignments…</p>
+    </main>
+    <div id="toast" role="status" aria-live="polite" hidden></div>
+    <dialog id="confirm-dialog">
+      <form method="dialog">
+        <h2 id="confirm-title"></h2>
+        <p id="confirm-description"></p>
+        <div class="actions">
+          <button value="cancel" class="secondary">Cancel</button
+          ><button value="confirm" class="danger" id="confirm-button">
+            Delete
+          </button>
+        </div>
+      </form>
+    </dialog>
+  </body>
+</html>
