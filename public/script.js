@@ -265,6 +265,7 @@
     return url.href;
   }
   function update() {
+    $('copy-feedback').hidden = true;
     if (!topic || !mode) return;
     $('duration-setting').hidden = mode !== 'exam';
     $('open-activity-label').textContent = 'Self Study';
@@ -349,15 +350,12 @@
       await window.seemathsTeacher.registered(data);
       sharedAssignments.set(exercise, assignment);
     }
-    let manage = document.getElementById('manage-assignment');
-    if (!manage) { manage = document.createElement('a'); manage.id = 'manage-assignment'; manage.textContent = 'Manage assignment'; manage.className = 'assignment-management-link'; $('finish-step').append(manage); }
-    manage.href = `/manage/${assignment.id}?teacher=${assignment.teacherNumber}#key=${encodeURIComponent(assignment.managementToken)}`;
-    manage.title = 'Private teacher dashboard — keep this link';
     const url = new URL(exercise); url.searchParams.set('assignment', assignment.id); if(assignment.teacherNumber)url.searchParams.set('teacher',assignment.teacherNumber); return url.href;
   }
   $('copy-link').addEventListener('click', async () => {
     if (!validate(true)) return;
     const button = $('copy-link'); button.disabled = true;
+    $('status').textContent = ''; $('copy-feedback').hidden = true;
     let url;
     try { url = await assignmentLink(); }
     catch (error) { $('status').textContent = error.message; button.disabled = false; return; }
@@ -367,7 +365,8 @@
       if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
       await navigator.clipboard.writeText(url);
       $('activity-link').hidden = true;
-      $('status').textContent = 'Copied!';
+      $('status').textContent = '';
+      $('copy-feedback').hidden = false;
     } catch {
       $('activity-link').hidden = false; $('activity-link').focus(); $('activity-link').select();
       $('status').textContent = 'Copy the selected link.';
