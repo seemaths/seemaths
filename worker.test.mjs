@@ -202,3 +202,19 @@ test('gallery practice and print links reach the backend for every question fami
   });
   assert.equal(calls.length,0);
 });
+
+test('teacher lookup reaches the portal and local player saves emit an event',async()=>{
+  const env={ASSIGNMENTS_ORIGIN:'https://portal.example',ASSETS:{fetch(){throw new Error('unexpected static fetch');}}};
+  await withFetch(async request=>{
+    if(new URL(request.url).pathname.startsWith('/api/teachers/')){
+      assert.equal(new URL(request.url).origin,'https://portal.example');
+      return Response.json({assignments:[]});
+    }
+    return new Response("export const putAttempt = attempt => transaction('readwrite', store => store.put(cloneData({...attempt, updatedAt:Date.now()})));",{headers:{'Content-Type':'text/javascript'}});
+  },async()=>{
+    assert.equal((await worker.fetch(new Request('https://seemaths.org/api/teachers/12345678'),env)).status,200);
+    const response=await worker.fetch(new Request('https://seemaths.org/runtime/seemaths-attempts.js'),env);
+    assert.match(await response.text(),/seemaths:attempt-saved/);
+    assert.equal(response.headers.get('Cache-Control'),'no-store');
+  });
+});

@@ -1,3 +1,4 @@
+import '/teacher.js?v=1';
 const root = document.querySelector("#app");
 const topics = {
   random: "Mixed maths",
@@ -12,7 +13,6 @@ const topicLabel = value => value.split(",").map(topic => topics[topic] || topic
 const mineKey = "seemaths.assignments.managed.v1";
 const studentKey = (id) => `seemaths.assignments.student.v1.${id}`;
 let config,
-  poll,
   toastTimer,
   storageFailed = false;
 const escape = (value) =>
@@ -49,7 +49,7 @@ const studentNumber = (number) => String(number).padStart(4, "0");
 const recipeSummary = (recipe) =>
   `${recipe.count} questions · ${recipe.mode === "exam" ? "Exam" : "Practice"} · Levels ${recipe.levelMin}–${recipe.levelMax}`;
 const privateURL = (id, key) =>
-  `${location.origin}/manage/${id}#key=${encodeURIComponent(key)}`;
+  `${location.origin}/manage/${id}${window.seemathsTeacher.number() ? `?teacher=${window.seemathsTeacher.number()}` : ""}#key=${encodeURIComponent(key)}`;
 const studentURL = (id) => `${location.origin}/a/${id}`;
 
 function read(key, fallback) {
@@ -107,6 +107,7 @@ function remember(assignment, key) {
     {
       id: assignment.id,
       key,
+      teacherNumber: assignment.teacherNumber,
       reference: assignment.reference,
       recipe: assignment.recipe,
       expiresAt: assignment.expiresAt,
@@ -185,12 +186,11 @@ async function api(path, { method = "GET", body, key } = {}) {
   return data;
 }
 function errorPage(error) {
-  clearInterval(poll);
   root.innerHTML = `<section class="error-page"><p class="eyebrow">See Maths assignments</p><h1>${error.status === 410 ? "Assignment expired" : error.status === 403 ? "Private link needed" : "Could not open this page"}</h1><p class="muted">${escape(error.message)}</p><div class="actions"><a class="primary" href="/assignments">My assignments</a><button class="secondary" id="retry">Try again</button></div></section>`;
   document.querySelector("#retry").onclick = () => location.reload();
 }
 function listItem(item, managed = false) {
-  return `<a class="assignment-item" href="${managed ? `/manage/${item.id}` : `/a/${item.id}`}"><div class="item-top"><h3>${escape(topicLabel(item.recipe.topic))}</h3><span class="pill ${item.closed ? "closed" : ""}">${item.closed ? "Closed" : item.recipe.mode === "exam" ? "Exam" : "Practice"}</span></div><p class="reference">${ref(item.reference)}</p><p>${item.recipe.count} questions · Levels ${item.recipe.levelMin}–${item.recipe.levelMax}</p><p class="small">Expires ${date(item.expiresAt)}</p></a>`;
+  return `<a class="assignment-item" href="${managed ? `/manage/${item.id}?teacher=${item.teacherNumber || ""}` : `/a/${item.id}`}"><div class="item-top"><h3>${escape(topicLabel(item.recipe.topic))}</h3><span class="pill ${item.closed ? "closed" : ""}">${item.closed ? "Closed" : item.recipe.mode === "exam" ? "Exam" : "Practice"}</span></div><p class="reference">${ref(item.reference)}</p>${item.teacherNumber ? `<p class="small">Teacher Id ${escape(item.teacherNumber)}</p>` : ""}<p>${item.recipe.count} questions · Levels ${item.recipe.levelMin}–${item.recipe.levelMax}</p><p class="small">Expires ${date(item.expiresAt)}</p></a>`;
 }
 function setNav(name) {
   document
@@ -201,80 +201,16 @@ function setNav(name) {
     .classList.toggle("active", name === "discover");
 }
 
-function home() {
-  setNav("mine");
-  const saved = savedAssignments();
-  root.innerHTML = `<div class="page-heading"><div><h1>Assignments</h1><p class="muted">Share an exercise and follow your students’ progress.</p></div></div>
-    ${!storageAvailable() ? '<p class="notice warning storage-warning">Enable browser storage to create and remember assignments on this device.</p>' : ""}
-    <div class="layout"><section class="panel"><div class="section-label"><h2>New assignment</h2><span class="muted">Lasts 7 days</span></div><form id="create-form">
-    <fieldset><legend>Topic</legend><div class="topic-grid">${Object.entries(
-      topics,
-    )
-      .map(
-        ([value, label]) =>
-          `<label class="topic-choice"><input type="radio" name="topic" value="${value}" ${value === "random" ? "checked" : ""}><span>${label}</span></label>`,
-      )
-      .join("")}</div></fieldset>
-    <fieldset><legend>Activity</legend><div class="mode-grid"><label class="mode-choice"><input name="mode" type="radio" value="practice" checked><span>Practice</span></label><label class="mode-choice"><input name="mode" type="radio" value="exam"><span>Exam</span></label></div></fieldset>
-    <div class="form-grid"><div class="field"><label for="count">Questions</label><input id="count" name="count" type="number" min="1" max="99" value="10" required></div><div class="field"><label>Difficulty</label><div class="level-fields"><label>From<select name="levelMin" aria-label="Minimum difficulty">${[1, 2, 3, 4, 5].map((n) => `<option value="${n}">Level ${n}</option>`).join("")}</select></label><label>To<select name="levelMax" aria-label="Maximum difficulty">${[1, 2, 3, 4, 5].map((n) => `<option value="${n}" ${n === 5 ? "selected" : ""}>Level ${n}</option>`).join("")}</select></label></div></div><div class="field" id="minutes-field" hidden><label for="minutes">Time limit (minutes)</label><input id="minutes" name="minutes" type="number" min="1" max="180" value="30" required></div></div>
-    <div class="divider"></div><p id="create-error" class="error-text" role="alert"></p><div class="form-footer"><span class="expiry-note">No names. No emails.</span><button class="primary" type="submit">Create assignment</button></div></form></section>
-    <section class="panel"><div class="section-label"><h2>Saved on this browser</h2><span class="muted">${saved.length}</span></div>${saved.length ? `<div class="assignment-list">${saved.map((a) => listItem(a, true)).join("")}</div><p class="private-note">Your private management links stay in this browser.</p>` : '<div class="empty"><div class="empty-mark" aria-hidden="true">÷</div><h3>Your next assignment starts here.</h3><p>Create an assignment, share the student link and return here to see progress.</p></div>'}</section></div>`;
-  const form = document.querySelector("#create-form");
-  // A homepage can prefill this builder with the same recipe fields used by /play.
-  const query = new URLSearchParams(location.search);
-  for (const name of [
-    "topic",
-    "mode",
-    "count",
-    "levelMin",
-    "levelMax",
-    "minutes",
-  ])
-    if (query.has(name)) {
-      const field = form.elements.namedItem(name);
-      if (field) field.value = query.get(name);
-    }
-  const updateMode = () =>
-    (document.querySelector("#minutes-field").hidden =
-      form.elements.mode.value !== "exam");
-  form.addEventListener("change", updateMode);
-  updateMode();
-  form.onsubmit = async (event) => {
-    event.preventDefault();
-    const button = form.querySelector("button[type=submit]"),
-      error = document.querySelector("#create-error");
-    error.textContent = "";
-    if (!storageAvailable()) {
-      error.textContent =
-        "Enable browser storage before creating an assignment.";
-      return;
-    }
-    const data = new FormData(form),
-      recipe = Object.fromEntries(data);
-    for (const name of ["count", "levelMin", "levelMax", "minutes"])
-      recipe[name] = Number(recipe[name]);
-    if (recipe.levelMin > recipe.levelMax) {
-      error.textContent =
-        "Minimum difficulty must not exceed maximum difficulty.";
-      return;
-    }
-    button.disabled = true;
-    button.textContent = "Creating…";
-    try {
-      const assignment = await api("/api/assignments", {
-        method: "POST",
-        body: recipe,
-      });
-      remember(assignment, assignment.managementToken);
-      location.assign(
-        `${privateURL(assignment.id, assignment.managementToken)}&new=1`,
-      );
-    } catch (e) {
-      error.textContent = e.message;
-      button.disabled = false;
-      button.textContent = "Create assignment";
-    }
-  };
+async function home() {
+  setNav('mine');
+  const assignments=await window.seemathsTeacherReady;
+  const number=window.seemathsTeacher.number();
+  if(number) history.replaceState(null,'',`/assignments?teacher=${number}`);
+  root.innerHTML=`<div class="page-heading"><div><h1>Assignments</h1><p class="muted">${number ? `Teacher Id ${escape(number)}` : 'Recover your assignments with your Teacher Id.'}</p></div><a class="primary" href="/">Create Assignment</a></div>
+    <form class="teacher-lookup" id="teacher-lookup"><label for="teacher-number">Teacher Id</label><input id="teacher-number" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" minlength="8" placeholder="8-digit number" required><button class="secondary">Find assignments</button></form>
+    <section class="panel"><div class="section-label"><h2>${assignments.length} Assignments</h2><button class="quiet" id="refresh-list">Refresh</button></div><div class="assignment-list">${assignments.length ? assignments.map(a=>listItem(a,true)).join('') : '<p class="muted">No active assignments. Assignments and progress expire after seven days.</p>'}</div></section>`;
+  document.querySelector('#teacher-lookup').onsubmit=e=>{e.preventDefault();location.assign(`/assignments?teacher=${document.querySelector('#teacher-number').value}`);};
+  document.querySelector('#refresh-list').onclick=()=>location.reload();
 }
 
 async function discover() {
@@ -319,21 +255,23 @@ async function dashboard(id) {
   const fragment = new URLSearchParams(location.hash.slice(1)),
     stored = savedAssignments().find((a) => a.id === id),
     key = fragment.get("key") || stored?.key;
-  if (!key)
+  const teacherNumber = new URLSearchParams(location.search).get("teacher");
+  if (!key && !teacherNumber)
     throw Object.assign(
       new Error(
         "Use the private management link saved when this assignment was created.",
       ),
       { status: 403 },
     );
-  const assignment = await api(`/api/assignments/${id}/manage`, { key });
+  const progressPath=`/api/assignments/${id}/manage${teacherNumber ? `?teacher=${teacherNumber}` : ""}`;
+  const assignment = await api(progressPath, { key });
   const newlyCreated = fragment.get("new") === "1";
-  if (remember(assignment, key))
-    history.replaceState(null, "", location.pathname);
-  else
+  if (key && remember(assignment, key))
+    history.replaceState(null, "", `${location.pathname}${assignment.teacherNumber ? `?teacher=${assignment.teacherNumber}` : ""}`);
+  else if(key)
     toast("Browser storage is unavailable. Save your private management link.");
   setNav("mine");
-  root.innerHTML = `<a class="back-link" href="/assignments">My assignments</a><div class="dashboard-heading"><p class="eyebrow">Assignment <span class="reference">${ref(assignment.reference)}</span></p><h1>${topicLabel(assignment.recipe.topic)}</h1><div class="heading-meta"><span>${assignment.recipe.count} questions</span><span>${assignment.recipe.mode === "exam" ? "Exam" : "Practice"}</span><span>Levels ${assignment.recipe.levelMin}–${assignment.recipe.levelMax}</span><span>Expires ${expiryDate(assignment.expiresAt)}</span></div></div>
+  root.innerHTML = `<a class="back-link" href="/assignments${assignment.teacherNumber ? `?teacher=${assignment.teacherNumber}` : ""}">My assignments</a><div class="dashboard-heading"><p class="eyebrow">Assignment <span class="reference">${ref(assignment.reference)}</span></p><h1>${topicLabel(assignment.recipe.topic)}</h1><div class="heading-meta"><span>${assignment.recipe.count} questions</span><span>${assignment.recipe.mode === "exam" ? "Exam" : "Practice"}</span><span>Levels ${assignment.recipe.levelMin}–${assignment.recipe.levelMax}</span><span>Expires ${expiryDate(assignment.expiresAt)}</span></div></div>
   ${newlyCreated ? '<p class="notice" id="created-notice">Your assignment is ready. Share the student link, and save your private management link to return from another browser.</p><div class="divider"></div>' : ""}
   <section class="share-panel"><div><h2>Share this assignment</h2><p>Students tell you their number. Their names stay with you.</p></div><div class="actions"><button class="primary" id="copy-student">Copy student link</button><button class="secondary" id="copy-management">Copy management link</button><button class="secondary" id="save-link" aria-label="Download private management link">Save link</button></div></section>
   <section class="panel students-panel"><div class="students-toolbar"><h2>Student progress</h2><div class="actions"><span class="muted" id="last-sync">Updating…</span><button class="quiet" id="refresh">Refresh</button></div></div><div id="students"></div></section>
@@ -364,7 +302,7 @@ async function dashboard(id) {
     if (busy || document.hidden) return;
     busy = true;
     try {
-      render(await api(`/api/assignments/${id}/manage`, { key }));
+      render(await api(progressPath, { key }));
     } catch (e) {
       if ([404, 410, 403].includes(e.status)) {
         errorPage(e);
@@ -378,10 +316,8 @@ async function dashboard(id) {
     }
   }
   render(assignment);
-  poll = setInterval(refresh, 20000);
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) refresh();
-  });
+  if(!key) for(const selector of ['#copy-management','#save-link','#close-assignment','#delete-assignment']) document.querySelector(selector).hidden=true;
+
   document.querySelector("#refresh").onclick = refresh;
   document.querySelector("#copy-student").onclick = () => copy(studentURL(id));
   document.querySelector("#copy-management").onclick = () =>
@@ -454,297 +390,17 @@ async function dashboard(id) {
   };
 }
 
-async function student(id) {
-  const assignment = await api(`/api/assignments/${id}`);
-  setNav("");
-  const hash = new URLSearchParams(location.hash.slice(1));
-  let session = read(studentKey(id), null);
-  if (hash.has("key") && hash.has("student")) {
-    session = { key: hash.get("key"), id: hash.get("student") };
-    if (write(studentKey(id), session))
-      history.replaceState(null, "", location.pathname);
-  }
-  const introduction = () => {
-    root.innerHTML = `<section class="student-intro"><p class="eyebrow">Assignment ${ref(assignment.reference)}</p><h1>${topicLabel(assignment.recipe.topic)}</h1><p class="muted">Your work has a number. You don’t need an account.</p><section class="panel"><div class="exercise-summary"><div><strong>${assignment.recipe.count}</strong><span>Questions</span></div><div><strong>${assignment.recipe.mode === "exam" ? "Exam" : "Practice"}</strong><span>${assignment.recipe.mode === "exam" ? assignment.recipe.minutes + " minutes" : "At your pace"}</span></div><div><strong>${assignment.recipe.levelMin}–${assignment.recipe.levelMax}</strong><span>Difficulty levels</span></div></div><p class="notice">When you start, tell your teacher your student number. Your progress is shared with whoever has the private management link.</p><div class="divider"></div><button class="primary" id="start" ${assignment.closed ? "disabled" : ""}>${assignment.closed ? "Closed to new students" : "Start assignment"}</button><p class="error-text" id="join-error" role="alert"></p><p class="private-note">Expires ${expiryDate(assignment.expiresAt)}. No names or emails are collected.</p></section></section>`;
-    document.querySelector("#start").onclick = async () => {
-      const button = document.querySelector("#start");
-      button.disabled = true;
-      button.textContent = "Getting your number…";
-      try {
-        if (!storageAvailable())
-          throw new Error(
-            "Enable browser storage to save your student number and progress.",
-          );
-        // Save the join secret before sending: network retries never create duplicate students.
-        session = read(studentKey(id), null) || { key: randomKey() };
-        if (!write(studentKey(id), session))
-          throw new Error("Your browser could not save this student session.");
-        const joined = await api(`/api/assignments/${id}/join`, {
-          method: "POST",
-          body: { credential: session.key },
-        });
-        session = {
-          ...session,
-          id: joined.id,
-          number: joined.number,
-          expiresAt: assignment.expiresAt,
-        };
-        write(studentKey(id), session);
-        await openPlayer(joined);
-      } catch (e) {
-        document.querySelector("#join-error").textContent = e.message;
-        button.disabled = false;
-        button.textContent = "Start assignment";
-      }
-    };
-  };
-  async function openPlayer(initial) {
-    let latest = initial,
-      queue = session.pending || null,
-      sending = false,
-      connected = false,
-      terminal = false;
-    // A stored unsent revision must remain ahead of the server on reload.
-    let revision = Math.max(initial.revision, queue?.revision || 0),
-      lastSignature = "",
-      lastAck = initial.updatedAt;
-    if (initial.completedAt) queue = null;
-    document.body.classList.add("student-view");
-    const badge = document.createElement("div");
-    badge.className = "student-id";
-    badge.setAttribute("aria-label", `Student Id ${studentNumber(initial.number)}`);
-    badge.innerHTML = `<span>Student Id</span><strong>${studentNumber(initial.number)}</strong>`;
-    document.querySelector(".masthead .student-id")?.remove();
-    document.querySelector(".masthead").append(badge);
-    root.innerHTML = `<p class="eyebrow">Assignment ${ref(assignment.reference)} · ${topicLabel(assignment.recipe.topic)}</p><div class="player-toolbar"><span class="sync-status" id="sync-status">${initial.completedAt ? "Assignment completed" : "Connecting to exercise…"}</span><div class="actions"><button class="quiet" id="copy-resume">Copy resume link</button><button class="quiet" id="retry-sync">Retry sync</button><button class="quiet" id="switch-student">Start as another student</button></div></div><p id="player-notice" class="notice warning" hidden></p><iframe id="exercise" title="${escape(topicLabel(assignment.recipe.topic))} assignment" referrerpolicy="no-referrer" allow="fullscreen"></iframe>`;
-    const frame = document.querySelector("#exercise"),
-      status = document.querySelector("#sync-status"),
-      notice = document.querySelector("#player-notice");
-    const target = new URL("/play", config.playerOrigin);
-    for (const [name, value] of Object.entries(assignment.recipe))
-      target.searchParams.set(name, value);
-    target.searchParams.set("assignment", id);
-    target.searchParams.set("portalOrigin", location.origin);
-    if (initial.attemptId || queue?.attemptId)
-      target.searchParams.set("attempt", initial.attemptId || queue.attemptId);
-    function persist() {
-      session = {
-        ...session,
-        id: initial.id,
-        number: initial.number,
-        expiresAt: assignment.expiresAt,
-        pending: queue,
-      };
-      if (!write(studentKey(id), session)) {
-        notice.hidden = false;
-        notice.textContent =
-          "Browser storage is unavailable. Keep this page open and copy your resume link.";
-      }
-    }
-    function syncText() {
-      if (terminal) return;
-      if (queue)
-        status.textContent = navigator.onLine
-          ? "Progress saved on this device · waiting to sync"
-          : "Offline · progress saved on this device";
-      else if (initial.completedAt || latest.completedAt)
-        status.textContent = "Completed · progress synced";
-      else
-        status.textContent = connected
-          ? `Progress synced · ${ago(lastAck)}`
-          : "Connecting to exercise…";
-    }
-    async function flush() {
-      if (!queue || sending || terminal || !navigator.onLine) return;
-      sending = true;
-      const snapshot = queue;
-      try {
-        const result = await api(
-          `/api/assignments/${id}/students/${initial.id}`,
-          { method: "PUT", key: session.key, body: snapshot },
-        );
-        latest = result;
-        lastAck = result.updatedAt;
-        if (queue?.revision === snapshot.revision) queue = null;
-        persist();
-      } catch (e) {
-        if ([404, 410, 403, 409].includes(e.status)) {
-          terminal = true;
-          queue = null;
-          persist();
-          notice.hidden = false;
-          notice.textContent = e.message;
-          status.textContent = "Progress sharing stopped";
-        } else {
-          status.textContent =
-            "Progress saved on this device · sync will retry";
-        }
-      } finally {
-        sending = false;
-        syncText();
-      }
-    }
-    function onMessage(event) {
-      if (
-        event.origin !== config.playerOrigin ||
-        event.source !== frame.contentWindow
-      )
-        return;
-      const message = event.data;
-      if (
-        !message ||
-        message.assignmentId !== id ||
-        message.protocol !== "seemaths.assignments.v1"
-      )
-        return;
-      if (message.type === "ready") {
-        connected = true;
-        notice.hidden = true;
-        syncText();
-        return;
-      }
-      if (
-        message.type !== "progress" ||
-        !Array.isArray(message.answers) ||
-        message.answers.length > assignment.recipe.count ||
-        terminal ||
-        latest.completedAt
-      )
-        return;
-      const answers = message.answers
-        .filter(
-          (a) =>
-            a &&
-            Number.isInteger(a.index) &&
-            a.index >= 1 &&
-            a.index <= assignment.recipe.count &&
-            (typeof a.correct === "boolean" || a.correct === null),
-        )
-        .map((a) => ({ index: a.index, correct: a.correct }));
-      if (
-        answers.length !== message.answers.length ||
-        new Set(answers.map((a) => a.index)).size !== answers.length
-      )
-        return;
-      const attemptId =
-        typeof message.attemptId === "string" &&
-        /^[0-9a-f-]{36}$/i.test(message.attemptId)
-          ? message.attemptId
-          : null;
-      const snapshot = {
-        answers,
-        completed: message.completed === true,
-        ...(attemptId ? { attemptId } : {}),
-      };
-      const signature = JSON.stringify(snapshot);
-      if (signature === lastSignature) return;
-      lastSignature = signature;
-      connected = true;
-      notice.hidden = true;
-      queue = { ...snapshot, revision: ++revision };
-      persist();
-      syncText();
-      flush();
-    }
-    window.addEventListener("message", onMessage);
-    frame.src = target.href;
-    const handshake = setTimeout(() => {
-      if (!connected && !initial.completedAt) {
-        notice.hidden = false;
-        notice.textContent =
-          "The exercise has not connected to progress sharing yet. Your teacher will see updates once the player connection is available.";
-        status.textContent = "Waiting for exercise connection";
-      }
-    }, 12000);
-    const retry = setInterval(() => {
-      if (Date.now() / 1000 >= assignment.expiresAt) {
-        terminal = true;
-        queue = null;
-        localStorage.removeItem(studentKey(id));
-        notice.hidden = false;
-        notice.textContent =
-          "This assignment has expired. Progress sharing has stopped.";
-        status.textContent = "Assignment expired";
-        frame.hidden = true;
-        return;
-      }
-      flush();
-      if (connected) syncText();
-    }, 10000);
-    window.addEventListener("online", flush);
-    document.querySelector("#retry-sync").onclick = () => {
-      if (queue) flush();
-      else
-        toast(
-          connected
-            ? "Your progress is up to date."
-            : "Waiting for the exercise to connect.",
-        );
-    };
-    document.querySelector("#copy-resume").onclick = () =>
-      copy(
-        `${studentURL(id)}#student=${initial.id}&key=${encodeURIComponent(session.key)}`,
-        "Private resume link copied",
-      );
-    document.querySelector("#switch-student").onclick = async () => {
-      if (
-        !(await confirmAction(
-          "Start as another student?",
-          "Copy your resume link first if you want to return to this student number. The next student will receive a different number.",
-          "Continue",
-        ))
-      )
-        return;
-      localStorage.removeItem(studentKey(id));
-      location.assign(studentURL(id));
-    };
-    window.addEventListener(
-      "pagehide",
-      () => {
-        persist();
-        clearInterval(retry);
-        clearTimeout(handshake);
-        window.removeEventListener("message", onMessage);
-        window.removeEventListener("online", flush);
-      },
-      { once: true },
-    );
-    await flush();
-  }
-  if (session?.id) {
-    try {
-      await openPlayer(
-        await api(`/api/assignments/${id}/students/${session.id}`, {
-          key: session.key,
-        }),
-      );
-    } catch (e) {
-      if (e.status === 404) {
-        localStorage.removeItem(studentKey(id));
-        session = null;
-        introduction();
-      } else throw e;
-    }
-  } else introduction();
-}
-function randomKey() {
-  return btoa(
-    String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))),
-  )
-    .replaceAll("+", "-")
-    .replaceAll("/", "_")
-    .replaceAll("=", "");
-}
 
 try {
   purgeExpiredSessions();
+  await window.seemathsTeacherReady;
   config = await api("/api/config");
   const parts = location.pathname.split("/").filter(Boolean);
   if (parts[0] === "manage" && parts[1]) await dashboard(parts[1]);
-  else if (parts[0] === "a" && parts[1]) await student(parts[1]);
+  else if (parts[0] === "a" && parts[1]) location.replace(studentURL(parts[1]));
   else if (new URLSearchParams(location.search).get("view") === "discover")
     await discover();
-  else home();
+  else await home();
 } catch (error) {
   errorPage(error);
 }
