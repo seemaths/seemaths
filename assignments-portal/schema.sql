@@ -1,7 +1,6 @@
 CREATE TABLE IF NOT EXISTS assignments (
  id TEXT PRIMARY KEY, reference TEXT NOT NULL UNIQUE,
  management_hash TEXT NOT NULL, recipe TEXT NOT NULL,
- teacher_hash TEXT, teacher_number TEXT,
  created_at BIGINT NOT NULL, expires_at BIGINT NOT NULL,
  closed INTEGER NOT NULL DEFAULT 0 CHECK (closed IN (0,1)),
  next_number INTEGER NOT NULL DEFAULT 1 CHECK (next_number BETWEEN 1 AND 101)
@@ -23,5 +22,3 @@ CREATE TABLE IF NOT EXISTS rate_buckets (
  bucket TEXT PRIMARY KEY, count INTEGER NOT NULL, expires_at BIGINT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS rate_expiry ON rate_buckets(expires_at);
-
-CREATE INDEX IF NOT EXISTS assignments_teacher ON assignments(teacher_number);

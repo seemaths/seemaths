@@ -55,7 +55,7 @@ export async function prepareStudent() {
     const url = new URL(location.href);
     for (const [key, value] of Object.entries(assignment.recipe)) if (value != null) url.searchParams.set(key, value);
     url.searchParams.set('assignment', assignmentId);
-    if (assignment.teacherNumber) url.searchParams.set('teacher', assignment.teacherNumber);
+    url.searchParams.delete('teacher');
     session = read(assignmentId);
     const fragment = new URLSearchParams(location.hash.slice(1));
     if (uuid.test(fragment.get('student') || '') && /^[A-Za-z0-9_-]{43,86}$/.test(fragment.get('key') || '')) {

@@ -11,7 +11,7 @@ import sqlite3
 import time
 from contextlib import contextmanager
 from typing import Literal, Optional
-from urllib.parse import urlsplit, urlencode
+from urllib.parse import urlsplit, urlencode, parse_qs
 from uuid import UUID, uuid4, uuid5, NAMESPACE_URL
 
 from fastapi import FastAPI, HTTPException, Request
@@ -85,13 +85,8 @@ class Database:
             Path(url).parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as db:
             for statement in (ROOT / 'schema.sql').read_text().split(';'):
-                if statement.strip() and 'assignments_teacher' not in statement:
+                if statement.strip():
                     db.execute(statement)
-            columns = {row['name'] for row in db.execute('PRAGMA table_info(assignments)').fetchall()}
-            for column in ('teacher_hash', 'teacher_number'):
-                if column not in columns:
-                    db.execute(f'ALTER TABLE assignments ADD COLUMN {column} TEXT')
-            db.execute('CREATE INDEX IF NOT EXISTS assignments_teacher ON assignments(teacher_number)')
             if 'active_seconds' not in {row['name'] for row in db.execute('PRAGMA table_info(participants)').fetchall()}:
                 db.execute('ALTER TABLE participants ADD COLUMN active_seconds INTEGER NOT NULL DEFAULT 0 CHECK (active_seconds BETWEEN 0 AND 604800)')
 
@@ -177,7 +172,7 @@ def create_app(database_url=None, now=None, rate_secret=None):
 
     def public(row):
         return dict(id=row['id'], reference=row['reference'], recipe=json.loads(row['recipe']),
-                    teacherNumber=row['teacher_number'], createdAt=row['created_at'], expiresAt=row['expires_at'], closed=bool(row['closed']))
+                    createdAt=row['created_at'], expiresAt=row['expires_at'], closed=bool(row['closed']))
 
     def participant(row):
         answers = json.loads(row['answers'])
@@ -212,44 +207,6 @@ def create_app(database_url=None, now=None, rate_secret=None):
     def config():
         return {'playerOrigin': player_origin, 'lifetimeDays': 7, 'maxParticipants': 100}
 
-    def teacher(tx, request):
-        value = request.headers.get('x-teacher-id')
-        if not value:
-            return None, None
-        try:
-            identity = digest(str(UUID(value)))
-        except ValueError:
-            raise HTTPException(422, 'Invalid teacher identity.')
-        if db.postgres:
-            tx.execute('SELECT pg_advisory_xact_lock(742002)')
-        existing = tx.execute('SELECT teacher_number FROM assignments WHERE teacher_hash=? LIMIT 1', (identity,)).fetchone()
-        number = existing['teacher_number'] if existing else f'{secrets.randbelow(100_000_000):08d}'
-        while not existing and tx.execute('SELECT id FROM assignments WHERE teacher_number=? LIMIT 1', (number,)).fetchone():
-            number = f'{secrets.randbelow(100_000_000):08d}'
-        return identity, number
-
-    @app.get('/api/teachers/{number}')
-    def teacher_assignments(number: str, request: Request):
-        if len(number) != 8 or not number.isascii() or not number.isdigit():
-            raise HTTPException(422, 'Enter an eight-digit Teacher Id.')
-        with db.connect() as tx:
-            rate(tx, 'teacher-read:'+peer(request), 90, 60)
-            rows = tx.execute('SELECT * FROM assignments WHERE teacher_number=? AND expires_at>? ORDER BY created_at DESC,id', (number, current_time())).fetchall()
-        return {'number': number, 'assignments': [public(r) for r in rows]}
-
-    @app.post('/api/assignments/{assignment_id}/teacher')
-    def claim_teacher(assignment_id: UUID, request: Request):
-        with db.connect() as tx:
-            row = assignment(tx, assignment_id)
-            authorize(request, row['management_hash'])
-            identity, number = teacher(tx, request)
-            if not identity:
-                raise HTTPException(422, 'Teacher identity is required.')
-            if row['teacher_hash'] and row['teacher_hash'] != identity:
-                raise HTTPException(409, 'This assignment already has a creator.')
-            tx.execute('UPDATE assignments SET teacher_hash=?,teacher_number=? WHERE id=?', (identity, number, str(assignment_id)))
-            return public(assignment(tx, assignment_id))
-
     def create_record(recipe, request, identifier=None, expose_management=True):
         cleanup()
         identifier, credential = identifier or str(uuid4()), secrets.token_urlsafe(32)
@@ -270,9 +227,8 @@ def create_app(database_url=None, now=None, rate_secret=None):
                 raise HTTPException(503, 'Assignments are at capacity. Please try again later.')
             while tx.execute('SELECT id FROM assignments WHERE reference=?', (reference,)).fetchone():
                 reference = f'{secrets.randbelow(100_000_000):08d}'
-            identity, number = teacher(tx, request) if expose_management else (None, None)
-            tx.execute('INSERT INTO assignments(id,reference,management_hash,recipe,created_at,expires_at,teacher_hash,teacher_number) VALUES (?,?,?,?,?,?,?,?)',
-                       (identifier, reference, digest(credential), recipe.model_dump_json(exclude_none=True), created, created+WEEK, identity, number))
+            tx.execute('INSERT INTO assignments(id,reference,management_hash,recipe,created_at,expires_at) VALUES (?,?,?,?,?,?)',
+                       (identifier, reference, digest(credential), recipe.model_dump_json(exclude_none=True), created, created+WEEK))
             result = public(assignment(tx, identifier))
         return {**result, **({'managementToken': credential} if expose_management else {})}
 
@@ -289,15 +245,22 @@ def create_app(database_url=None, now=None, rate_secret=None):
 
     @app.get('/api/assignments')
     def search(request: Request, q: str = '', offset: int = 0):
-        if len(q) > 40 or offset < 0 or offset > 10000:
+        if len(q) > 2048 or offset < 0 or offset > 10000:
             raise HTTPException(422, 'Invalid search.')
-        # Only fixed/generated references and topic enums are searchable; no free-text personal data.
-        query = q.strip().lower().replace('-', '')
+        query = q.strip()
+        if query.startswith(('http://', 'https://', '/')):
+            parsed = urlsplit(query)
+            query = parse_qs(parsed.query).get('assignment', [''])[0] or parsed.path.rstrip('/').split('/')[-1]
+        try:
+            identifier = str(UUID(query))
+        except ValueError:
+            identifier = ''
+        term = query.lower().replace('-', '')
         with db.connect() as tx:
             rate(tx, 'search:'+peer(request), 90, 60)
             rows = tx.execute('SELECT * FROM assignments WHERE expires_at>? AND '
-                '(reference LIKE ? OR recipe LIKE ?) ORDER BY created_at DESC,id LIMIT 25 OFFSET ?',
-                (current_time(), '%'+query+'%', '%"topic":"'+query+'%', offset)).fetchall()
+                '(id=? OR reference LIKE ? OR recipe LIKE ?) ORDER BY created_at DESC,id LIMIT 25 OFFSET ?',
+                (current_time(), identifier, '%'+term+'%', '%"topic":"'+term+'%', offset)).fetchall()
         return {'assignments': [public(r) for r in rows]}
 
     @app.get('/api/assignments/{assignment_id}')
@@ -371,8 +334,6 @@ def create_app(database_url=None, now=None, rate_secret=None):
         with db.connect() as tx:
             rate(tx, 'manage:'+peer(request), 120, 60)
             row = assignment(tx, assignment_id)
-            if not row['teacher_number'] or request.query_params.get('teacher') != row['teacher_number']:
-                authorize(request, row['management_hash'])
             students = tx.execute('SELECT * FROM participants WHERE assignment_id=? ORDER BY number', (str(assignment_id),)).fetchall()
             return {**public(row), 'students': [participant(s) for s in students]}
 
@@ -406,7 +367,7 @@ def create_app(database_url=None, now=None, rate_secret=None):
         with db.connect() as tx:
             row = assignment(tx, assignment_id)
             recipe = json.loads(row['recipe'])
-        return RedirectResponse('/play?' + urlencode({**recipe, 'assignment': str(assignment_id), **({'teacher': row['teacher_number']} if row['teacher_number'] else {})}))
+        return RedirectResponse('/play?' + urlencode({**recipe, 'assignment': str(assignment_id)}))
 
     @app.get('/')
     @app.get('/assignments')
