@@ -150,3 +150,7 @@ body{position:relative;min-height:100svh}
 @media(max-width:540px){.exercise-share-actions button,.exercise-share-actions a{flex-basis:36px;width:36px;height:36px;min-height:36px}.exercise-bottom-row{align-items:flex-start}.exercise-share{flex-basis:100%}.activity-controls .actions button{font-size:14px;min-width:0}.exercise-share-url{font-size:16px}}
 .activity-controls .actions .primary-button{background:#e6f1ef;color:var(--teal-dark);box-shadow:none}
 .activity-controls .actions .primary-button:hover{background:#d9eae6}
+
+.activity-controls{position:relative}
+.close-activity-panel{position:absolute;top:9px;right:9px;display:grid;place-items:center;width:28px;height:28px;padding:5px;border:0;border-radius:50%;background:#e6f1ef;color:var(--teal-dark)}
+.close-activity-panel:hover{background:#d9eae6}.close-activity-panel svg{display:block;width:18px;height:18px}

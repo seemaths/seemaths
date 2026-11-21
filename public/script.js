@@ -336,6 +336,13 @@
     document.querySelectorAll('[data-mode]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
     reveal('settings-step'); reveal('finish-step'); update(); followSelection(button, document.querySelector('.question-setting'));
   }));
+  $('close-activity-panel').addEventListener('click', () => {
+    cancelAnimationFrame(scrollFrame);
+    for (const id of ['settings-step', 'finish-step']) {
+      $(id).hidden = true; $(id).classList.remove('revealed');
+    }
+    document.querySelector(`[data-mode="${mode}"]`)?.focus({preventScroll:true});
+  });
   $('question-count').addEventListener('input', () => {
     if ($('question-count').checkValidity() && $('question-count').value) $('count-range').value = $('question-count').value;
     update();
