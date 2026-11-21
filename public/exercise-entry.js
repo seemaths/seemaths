@@ -2,14 +2,17 @@ import {createLoadingProgress} from '/runtime/loading-progress.js';
 const root = document.querySelector('#app');
 const arcade = location.hostname === 'arcade.seemaths.org' || new URLSearchParams(location.search).get('player') === 'arcade';
 const pin = /^\/([0-9]{4})\/?$/.exec(location.pathname)?.[1];
-document.title = `${arcade ? 'Arcade' : 'Standard player'} · See Maths`;
+document.title = arcade ? 'Arcade · See Maths' : 'See Maths';
 
 function entry(message = '') {
   root.className = 'exercise-entry';
   root.replaceChildren();
   const heading = document.createElement('h1');
-  heading.textContent = arcade ? 'See Maths Arcade' : 'See Maths';
-  root.append(heading);
+  const home = document.createElement('a'); home.className = 'exercise-home-logo';
+  home.href = 'https://seemaths.org/'; home.setAttribute('aria-label','See Maths home');
+  const mark = document.createElement('img'); mark.src = '/seemaths-logo.svg'; mark.alt = '';
+  const wordmark = document.createElement('span'); wordmark.textContent = 'See Maths';
+  home.append(mark, wordmark); heading.append(home); root.append(heading);
   if (arcade) {
     const hero = document.createElement('img');
     hero.className = 'exercise-hero'; hero.alt = 'See Maths Arcade';
@@ -20,8 +23,6 @@ function entry(message = '') {
       hero.replaceWith(image);
     }).catch(() => hero.remove());
     root.append(hero);
-  } else {
-    const subtitle = document.createElement('p'); subtitle.textContent = 'Standard player'; root.append(subtitle);
   }
   const form = document.createElement('form');
   const label = document.createElement('p'); label.id = 'exercise-pin-label'; label.textContent = 'Enter your exercise PIN';
