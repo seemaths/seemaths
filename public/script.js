@@ -159,7 +159,9 @@
   function updateSharing(assignment) {
     sharedURL = assignment?.studentURL || '';
     sharedTitle = assignment ? `See Maths · Exercise ${assignment.reference}` : '';
-    $('exercise-share').hidden = !sharedURL;
+    $('exercise-share').classList.toggle('is-ready', Boolean(sharedURL));
+    $('exercise-share').inert = !sharedURL;
+    $('exercise-share').setAttribute('aria-hidden', String(!sharedURL));
     $('share-feedback').textContent = '';
     $('share-copy').classList.remove('is-copied');
     $('share-copy').setAttribute('aria-label', 'Copy link');
