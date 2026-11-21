@@ -1,4 +1,4 @@
-import '/teacher.js?v=1';
+import '/assignment-library.js?v=1';
 const root = document.querySelector("#app");
 const topics = {
   random: "Mixed maths",
@@ -49,7 +49,7 @@ const studentNumber = (number) => String(number).padStart(4, "0");
 const recipeSummary = (recipe) =>
   `${recipe.count} questions · ${recipe.mode === "exam" ? "Exam" : "Practice"} · Levels ${recipe.levelMin}–${recipe.levelMax}`;
 const privateURL = (id, key) =>
-  `${location.origin}/manage/${id}${window.seemathsTeacher.number() ? `?teacher=${window.seemathsTeacher.number()}` : ""}#key=${encodeURIComponent(key)}`;
+  `${location.origin}/manage/${id}#key=${encodeURIComponent(key)}`;
 const studentURL = (id) => `${location.origin}/a/${id}`;
 
 function read(key, fallback) {
@@ -107,7 +107,6 @@ function remember(assignment, key) {
     {
       id: assignment.id,
       key,
-      teacherNumber: assignment.teacherNumber,
       reference: assignment.reference,
       recipe: assignment.recipe,
       expiresAt: assignment.expiresAt,
@@ -186,68 +185,47 @@ async function api(path, { method = "GET", body, key } = {}) {
   return data;
 }
 function errorPage(error) {
-  root.innerHTML = `<section class="error-page"><p class="eyebrow">See Maths assignments</p><h1>${error.status === 410 ? "Assignment expired" : error.status === 403 ? "Private link needed" : "Could not open this page"}</h1><p class="muted">${escape(error.message)}</p><div class="actions"><a class="primary" href="/assignments">My assignments</a><button class="secondary" id="retry">Try again</button></div></section>`;
+  root.innerHTML = `<section class="error-page"><p class="eyebrow">See Maths assignments</p><h1>${error.status === 410 ? "Assignment expired" : error.status === 403 ? "Private link needed" : "Could not open this page"}</h1><p class="muted">${escape(error.message)}</p><div class="actions"><a class="primary" href="/assignments">Assignments</a><button class="secondary" id="retry">Try again</button></div></section>`;
   document.querySelector("#retry").onclick = () => location.reload();
 }
-function listItem(item, managed = false) {
-  return `<a class="assignment-item" href="${managed ? `/manage/${item.id}?teacher=${item.teacherNumber || ""}` : `/a/${item.id}`}" title="${escape(topicLabel(item.recipe.topic))}"><h3>${escape(topicLabel(item.recipe.topic))}</h3><span class="reference">${ref(item.reference)}</span>${item.teacherNumber ? `<span>Teacher Id ${escape(item.teacherNumber)}</span>` : '<span>Teacher Id —</span>'}<span>${item.recipe.count} questions</span><span>Levels ${item.recipe.levelMin}–${item.recipe.levelMax}</span><span>Expires ${date(item.expiresAt)}</span><span class="pill ${item.closed ? "closed" : ""}">${item.closed ? "Closed" : item.recipe.mode === "exam" ? "Exam" : "Practice"}</span></a>`;
+function listItem(item) {
+  return `<a class="assignment-item" href="/manage/${item.id}" title="${escape(topicLabel(item.recipe.topic))}"><h3>${escape(topicLabel(item.recipe.topic))}</h3><span class="reference">${ref(item.reference)}</span><span>${item.recipe.count} ${item.recipe.count === 1 ? 'question' : 'questions'}</span><span>Levels ${item.recipe.levelMin}–${item.recipe.levelMax}</span><span>Expires ${date(item.expiresAt)}</span><span class="pill ${item.closed ? "closed" : ""}">${item.closed ? "Closed" : item.recipe.mode === "exam" ? "Exam" : "Practice"}</span></a>`;
 }
-function setNav(name) {
-  document
-    .querySelector("#nav-mine")
-    .classList.toggle("active", name === "mine");
-  document
-    .querySelector("#nav-discover")
-    .classList.toggle("active", name === "discover");
+function searchTerm(value) {
+  let term=value.trim();
+  try {const url=new URL(term,location.origin);if(term.includes('/') || url.searchParams.has('assignment')) term=url.searchParams.get('assignment') || url.pathname.split('/').filter(Boolean).at(-1) || term;} catch {}
+  return term.toLowerCase().replaceAll('-','');
 }
-
 async function home() {
-  setNav('mine');
-  const assignments=await window.seemathsTeacherReady;
-  const number=window.seemathsTeacher.number();
-  if(number) history.replaceState(null,'',`/assignments?teacher=${number}`);
-  root.innerHTML=`<div class="page-heading"><div><h1>Assignments</h1><p class="muted">${number ? `Teacher Id ${escape(number)}` : 'Recover your assignments with your Teacher Id.'}</p></div><a class="primary" href="/">Create Assignment</a></div>
-    <form class="teacher-lookup" id="teacher-lookup"><label for="teacher-number">Teacher Id</label><input id="teacher-number" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" minlength="8" placeholder="8-digit number" required><button class="secondary">Find assignments</button></form>
-    <section class="panel"><div class="section-label"><h2>${assignments.length} Assignments</h2><button class="quiet" id="refresh-list">Refresh</button></div><div class="assignment-list">${assignments.length ? assignments.map(a=>listItem(a,true)).join('') : '<p class="muted">No active assignments. Assignments and progress expire after seven days.</p>'}</div></section>`;
-  document.querySelector('#teacher-lookup').onsubmit=e=>{e.preventDefault();location.assign(`/assignments?teacher=${document.querySelector('#teacher-number').value}`);};
-  document.querySelector('#refresh-list').onclick=()=>location.reload();
-}
-
-async function discover() {
-  setNav("discover");
-  root.innerHTML =
-    '<div class="page-heading"><div><p class="eyebrow">Open exercises</p><h1>Find an assignment.</h1><p class="muted">Search by reference number or maths topic.</p></div></div><form id="search-form" class="search-row"><input class="search-input" id="query" type="search" maxlength="40" placeholder="e.g. 4827-1639 or geometry" aria-label="Search assignments"><button class="primary">Search</button></form><div class="search-results" id="results"></div><div class="actions" id="pagination"></div>';
-  let offset = 0;
-  const input = document.querySelector("#query");
-  const search = async () => {
+  const saved=savedAssignments();
+  let mine=new URLSearchParams(location.search).get('view')==='mine' && saved.length>0;
+  root.innerHTML=`<div class="page-heading"><div><h1>Assignments</h1><p class="muted">Find an assignment and view its students’ progress.</p></div><a class="primary" href="/">Create Assignment</a></div>
+    <form id="search-form" class="search-row"><input class="search-input" id="query" type="search" maxlength="2048" placeholder="Assignment link, ID, reference or topic" aria-label="Search assignments"><button class="primary">Search</button></form>
+    <section class="panel"><div class="section-label"><h2 id="list-heading">All Assignments</h2><div class="actions">${saved.length ? `<label class="mine-filter"><input id="mine-only" type="checkbox" ${mine?'checked':''}>My Assignments</label>` : ''}<button class="quiet" id="refresh-list">Refresh</button></div></div><p id="list-note" class="muted" hidden>Assignments created in this browser.</p><div class="assignment-list" id="results"></div><div class="actions" id="pagination"></div></section>`;
+  let offset=0, requestVersion=0;
+  const input=document.querySelector('#query');
+  async function search() {
+    const version=++requestVersion;
+    const target=document.querySelector('#results');
+    document.querySelector('#list-heading').textContent=mine?'My Assignments':'All Assignments';
+    document.querySelector('#list-note').hidden=!mine;
+    let rows=[];
     try {
-      const result = await api(
-        `/api/assignments?q=${encodeURIComponent(input.value)}&offset=${offset}`,
-      );
-      document.querySelector("#results").innerHTML = result.assignments.length
-        ? result.assignments.map((a) => listItem(a)).join("")
-        : '<p class="muted">No active assignments found.</p>';
-      document.querySelector("#pagination").innerHTML =
-        `${offset ? '<button class="secondary" id="previous-page">Previous</button>' : ""}${result.assignments.length === 25 ? '<button class="secondary" id="next-page">More assignments</button>' : ""}`;
-      document
-        .querySelector("#previous-page")
-        ?.addEventListener("click", () => {
-          offset -= 25;
-          search();
-        });
-      document.querySelector("#next-page")?.addEventListener("click", () => {
-        offset += 25;
-        search();
-      });
-    } catch (e) {
-      toast(e.message);
-    }
-  };
-  document.querySelector("#search-form").onsubmit = (e) => {
-    e.preventDefault();
-    offset = 0;
-    search();
-  };
+      if(mine){
+        const term=searchTerm(input.value);
+        const matches=savedAssignments().filter(a=>[a.id,a.reference,topicLabel(a.recipe.topic)].some(value=>String(value).toLowerCase().replaceAll('-','').includes(term)));
+        rows=matches.slice(offset,offset+25);
+      } else rows=(await api(`/api/assignments?q=${encodeURIComponent(input.value)}&offset=${offset}`)).assignments;
+      if(version!==requestVersion) return;
+      target.innerHTML=rows.length?rows.map(a=>listItem(a)).join(''):'<p class="muted">No active assignments found.</p>';
+      document.querySelector('#pagination').innerHTML=`${offset?'<button class="secondary" id="previous-page">Previous</button>':''}${rows.length===25?'<button class="secondary" id="next-page">More assignments</button>':''}`;
+      document.querySelector('#previous-page')?.addEventListener('click',()=>{offset-=25;search();});
+      document.querySelector('#next-page')?.addEventListener('click',()=>{offset+=25;search();});
+    } catch(error){if(version!==requestVersion)return;target.innerHTML='<p class="muted">Could not load assignments. Use Refresh to try again.</p>';toast(error.message);}
+  }
+  document.querySelector('#search-form').onsubmit=e=>{e.preventDefault();offset=0;search();};
+  document.querySelector('#mine-only')?.addEventListener('change',e=>{mine=e.target.checked;offset=0;history.replaceState(null,'',mine?'/assignments?view=mine':'/assignments');search();});
+  document.querySelector('#refresh-list').onclick=()=>search();
   await search();
 }
 
@@ -255,23 +233,15 @@ async function dashboard(id) {
   const fragment = new URLSearchParams(location.hash.slice(1)),
     stored = savedAssignments().find((a) => a.id === id),
     key = fragment.get("key") || stored?.key;
-  const teacherNumber = new URLSearchParams(location.search).get("teacher");
-  if (!key && !teacherNumber)
-    throw Object.assign(
-      new Error(
-        "Use the private management link saved when this assignment was created.",
-      ),
-      { status: 403 },
-    );
-  const progressPath=`/api/assignments/${id}/manage${teacherNumber ? `?teacher=${teacherNumber}` : ""}`;
+  const progressPath=`/api/assignments/${id}/manage`;
   const assignment = await api(progressPath, { key });
   const newlyCreated = fragment.get("new") === "1";
   if (key && remember(assignment, key))
-    history.replaceState(null, "", `${location.pathname}${assignment.teacherNumber ? `?teacher=${assignment.teacherNumber}` : ""}`);
+    history.replaceState(null, "", location.pathname);
   else if(key)
     toast("Browser storage is unavailable. Save your private management link.");
-  setNav("mine");
-  root.innerHTML = `<a class="back-link" href="/assignments${assignment.teacherNumber ? `?teacher=${assignment.teacherNumber}` : ""}">My assignments</a><div class="dashboard-heading"><p class="eyebrow">Assignment <span class="reference">${ref(assignment.reference)}</span></p><h1>${topicLabel(assignment.recipe.topic)}</h1><div class="heading-meta"><span>${assignment.recipe.count} questions</span><span>${assignment.recipe.mode === "exam" ? "Exam" : "Practice"}</span><span>Levels ${assignment.recipe.levelMin}–${assignment.recipe.levelMax}</span><span>Expires ${expiryDate(assignment.expiresAt)}</span></div></div>
+  history.replaceState(null,"",location.pathname);
+  root.innerHTML = `<a class="back-link" href="/assignments">Assignments</a><div class="dashboard-heading"><p class="eyebrow">Assignment <span class="reference">${ref(assignment.reference)}</span></p><h1>${topicLabel(assignment.recipe.topic)}</h1><div class="heading-meta"><span>${assignment.recipe.count} questions</span><span>${assignment.recipe.mode === "exam" ? "Exam" : "Practice"}</span><span>Levels ${assignment.recipe.levelMin}–${assignment.recipe.levelMax}</span><span>Expires ${expiryDate(assignment.expiresAt)}</span></div></div>
   ${newlyCreated ? '<p class="notice" id="created-notice">Your assignment is ready. Share the student link, and save your private management link to return from another browser.</p><div class="divider"></div>' : ""}
   <section class="share-panel"><div><h2>Share this assignment</h2><p>Students tell you their number. Their names stay with you.</p></div><div class="actions"><button class="primary" id="copy-student">Copy student link</button><button class="secondary" id="copy-management">Copy management link</button><button class="secondary" id="save-link" aria-label="Download private management link">Save link</button></div></section>
   <section class="panel students-panel"><div class="students-toolbar"><h2>Student progress</h2><div class="actions"><span class="muted" id="last-sync">Updating…</span><button class="quiet" id="refresh">Refresh</button></div></div><div id="students"></div></section>
@@ -393,13 +363,10 @@ async function dashboard(id) {
 
 try {
   purgeExpiredSessions();
-  await window.seemathsTeacherReady;
   config = await api("/api/config");
   const parts = location.pathname.split("/").filter(Boolean);
   if (parts[0] === "manage" && parts[1]) await dashboard(parts[1]);
   else if (parts[0] === "a" && parts[1]) location.replace(studentURL(parts[1]));
-  else if (new URLSearchParams(location.search).get("view") === "discover")
-    await discover();
   else await home();
 } catch (error) {
   errorPage(error);

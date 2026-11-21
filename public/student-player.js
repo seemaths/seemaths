@@ -1,4 +1,4 @@
-import { prepareStudent, watchProgress } from './student-session.js?v=3';
+import { prepareStudent, watchProgress } from './student-session.js?v=7';
 
 // Resolve the participant before the player creates/restores its browser attempt.
 // A temporary reporting outage must never stop the child opening their maths.

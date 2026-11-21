@@ -33,7 +33,7 @@ def manage(item):
     return {'Authorization': f"Bearer {item['managementToken']}"}
 
 
-def test_private_progress_is_not_public_and_credentials_are_scoped(portal):
+def test_progress_view_is_public_and_write_credentials_are_scoped(portal):
     client, _, _ = portal
     item = assignment(client)
     first, first_auth = student(client, item)
@@ -41,8 +41,8 @@ def test_private_progress_is_not_public_and_credentials_are_scoped(portal):
     base = f"/api/assignments/{item['id']}"
     assert 'managementToken' not in client.get(base).text
     assert 'students' not in client.get('/api/assignments').text
-    assert client.get(base+'/manage').status_code == 403
-    assert client.get(base+'/manage', headers=first_auth).status_code == 403
+    assert client.get(base+'/manage').status_code == 200
+    assert client.get(base+'/manage', headers=first_auth).status_code == 200
     assert client.get(base+f"/students/{first['id']}", headers=second_auth).status_code == 403
     assert client.delete(base+'/manage', headers=second_auth).status_code == 403
     assert len(client.get(base+'/manage', headers=manage(item)).json()['students']) == 2
@@ -168,7 +168,7 @@ def test_max_students_and_management_references_are_not_keys(portal):
         tx.execute('UPDATE assignments SET next_number=100 WHERE id=?', (item['id'],))
     assert student(client, item)[0]['number'] == 100
     assert client.post(f"/api/assignments/{item['id']}/join", json={'credential': secrets.token_urlsafe(32)}).status_code == 409
-    assert client.get(f"/api/assignments/{item['id']}/manage", headers={'Authorization': f"Bearer {item['reference']}"}).status_code == 403
+    assert client.patch(f"/api/assignments/{item['id']}/manage", json={'closed':True}, headers={'Authorization': f"Bearer {item['reference']}"}).status_code == 403
 
 
 def test_page_headers_and_search(portal):
@@ -205,39 +205,19 @@ def test_student_link_opens_questions_without_an_intermediate_page(portal):
     assert 'blueprint=shared-blueprint' in response.headers['location']
 
 
-def test_teacher_number_recovers_public_progress_but_never_write_access(portal):
+def test_assignment_link_and_uuid_find_public_progress_without_identity(portal):
     client, _, _ = portal
-    identity = {'X-Teacher-Id': str(uuid4())}
-    first = client.post('/api/assignments', json={'count': 3}, headers=identity).json()
-    second = client.post('/api/assignments', json={'count': 3}, headers=identity).json()
-    number = first['teacherNumber']
-    assert len(number) == 8 and number.isdigit()
-    assert second['teacherNumber'] == number
-    rows = client.get(f'/api/teachers/{number}').json()['assignments']
-    assert {r['id'] for r in rows} == {first['id'], second['id']}
-    assert 'managementToken' not in str(rows) and 'teacher_hash' not in str(rows)
-    child, _ = student(client, first)
-    path = f"/api/assignments/{first['id']}/manage?teacher={number}"
-    assert client.get(path).json()['students'][0]['number'] == child['number']
-    assert client.patch(path, json={'closed': True}).status_code == 403
-    assert client.delete(path).status_code == 403
-    assert client.get(path.replace(number, 'not-a-number')).status_code == 403
-
-
-def test_existing_assignment_can_only_be_attached_with_management_key(portal):
-    client, _, _ = portal
-    item = assignment(client)
-    path = f"/api/assignments/{item['id']}/teacher"
-    identity = {'X-Teacher-Id': str(uuid4())}
-    assert client.post(path, headers=identity).status_code == 403
-    result = client.post(path, headers={**identity, **manage(item)})
-    assert result.status_code == 200
-    assert result.json()['teacherNumber']
-    assert client.post(path, headers={'X-Teacher-Id': str(uuid4()), **manage(item)}).status_code == 409
-
-
-def test_teacher_records_expire_with_assignments(portal):
-    client, now, _ = portal
-    item = client.post('/api/assignments', json={}, headers={'X-Teacher-Id': str(uuid4())}).json()
-    now[0] += WEEK + 1
-    assert client.get(f"/api/teachers/{item['teacherNumber']}").json()['assignments'] == []
+    item=assignment(client)
+    child,_=student(client,item)
+    for query in [item['id'], item['reference'], f"https://seemaths.org/play?assignment={item['id']}&teacher=12345678", f"https://seemaths.org/a/{item['id']}", f"https://seemaths.org/manage/{item['id']}"]:
+        response=client.get('/api/assignments',params={'q':query})
+        assert response.status_code==200
+        assert response.json()['assignments'][0]['id']==item['id']
+    public=client.get(f"/api/assignments/{item['id']}/manage").json()
+    assert public['students'][0]['number']==child['number']
+    assert 'managementToken' not in public and 'teacherNumber' not in public
+    assert client.patch(f"/api/assignments/{item['id']}/manage",json={'closed':True}).status_code==403
+    assert client.delete(f"/api/assignments/{item['id']}/manage").status_code==403
+    assert client.patch(f"/api/assignments/{item['id']}/manage",headers=manage(item),json={'closed':True}).status_code==200
+    assert client.get('/api/teachers/12345678').status_code==404
+    assert 'teacher=' not in client.get(f"/a/{item['id']}",follow_redirects=False).headers['location']
