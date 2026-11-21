@@ -14,3 +14,5 @@ body:has(.exercise-entry){margin:0;background:#f4f8f7;color:#123d46;font-family:
 .exercise-home-logo img{position:absolute;left:-8px;top:-6px;width:32px;height:25px;object-fit:contain}
 .exercise-home-logo:focus-visible{outline:3px solid #168a82;outline-offset:8px;border-radius:6px}
 @media(max-width:540px){.exercise-home-logo{font-size:29px;padding:14px 0 0 10px}.exercise-home-logo img{left:-5px;top:-5px;width:28px;height:22px}}
+
+.exercise-entry #exercise-entry-error{font-size:inherit;font-weight:700}

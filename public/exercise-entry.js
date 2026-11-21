@@ -65,7 +65,7 @@ function entry(message = '') {
     try {
       const response = await fetch(`/api/assignments/${code}`, {cache:'no-store', signal:AbortSignal.timeout(12000)});
       if (!response.ok) {
-        error.textContent = [404,410].includes(response.status) ? 'Not Found' : 'Could not check the PIN. Try again.';
+        error.textContent = [404,410].includes(response.status) ? 'Exercise Not Found' : 'Could not check the PIN. Try again.';
         return;
       }
       const target = new URL('/' + code, location.origin);
@@ -89,7 +89,7 @@ async function openExercise() {
   try {
     const response = await fetch(`/api/assignments/${pin}`, {cache:'no-store', signal:AbortSignal.timeout(12000)});
     const exercise = await response.json();
-    if (!response.ok) throw new Error([404,410].includes(response.status) ? 'Not Found' : 'Could not open this exercise. Please try again.');
+    if (!response.ok) throw new Error([404,410].includes(response.status) ? 'Exercise Not Found' : 'Could not open this exercise. Please try again.');
     const expected = exercise.recipe.player === 'arcade' ? 'arcade.seemaths.org' : 'player.seemaths.org';
     if (location.hostname.endsWith('.seemaths.org') && location.hostname !== expected) {
       location.replace(`https://${expected}/${pin}${location.hash}`); return;
