@@ -200,8 +200,8 @@ async function home() {
   const saved=savedAssignments();
   let mine=new URLSearchParams(location.search).get('view')==='mine' && saved.length>0;
   root.innerHTML=`<h1 class="visually-hidden">Assignments</h1>
-    <form id="search-form" class="assignment-search" role="search"><input class="search-input" id="query" type="search" maxlength="2048" placeholder="Assignment link, ID, reference or topic" aria-label="Search assignments"><button type="submit">Search</button></form>
-    <div class="assignment-filters">${saved.length ? `<button type="button" class="mine-filter" id="mine-only" aria-pressed="${mine}"><span class="filter-tick" aria-hidden="true">✓</span>My Assignments</button>` : ''}<button class="quiet" id="refresh-list" type="button">Refresh</button></div>
+    <div class="assignment-toolbar"><form id="search-form" class="assignment-search" role="search"><input class="search-input" id="query" type="search" maxlength="2048" placeholder="Assignment link, ID, reference or topic" aria-label="Search assignments"><button type="submit">Search</button></form>
+    <div class="assignment-filters">${saved.length ? `<button type="button" class="mine-filter" id="mine-only" aria-pressed="${mine}"><span class="filter-tick" aria-hidden="true">✓</span>My Assignments</button>` : ''}</div></div>
     <section class="assignment-results"><h2 id="list-heading" class="visually-hidden">All Assignments</h2><p id="list-note" class="visually-hidden" hidden>Assignments created in this browser.</p><div class="assignment-list" id="results"></div><div class="actions" id="pagination"></div></section>`;
   let offset=0, requestVersion=0;
   const input=document.querySelector('#query');
@@ -222,11 +222,10 @@ async function home() {
       document.querySelector('#pagination').innerHTML=`${offset?'<button class="secondary" id="previous-page">Previous</button>':''}${rows.length===25?'<button class="secondary" id="next-page">More assignments</button>':''}`;
       document.querySelector('#previous-page')?.addEventListener('click',()=>{offset-=25;search();});
       document.querySelector('#next-page')?.addEventListener('click',()=>{offset+=25;search();});
-    } catch(error){if(version!==requestVersion)return;target.innerHTML='<p class="muted">Could not load assignments. Use Refresh to try again.</p>';toast(error.message);}
+    } catch(error){if(version!==requestVersion)return;target.innerHTML='<p class="muted">Could not load assignments. Use Search to try again.</p>';toast(error.message);}
   }
   document.querySelector('#search-form').onsubmit=e=>{e.preventDefault();offset=0;search();};
   document.querySelector('#mine-only')?.addEventListener('click',e=>{mine=!mine;e.currentTarget.setAttribute('aria-pressed',String(mine));offset=0;history.replaceState(null,'',mine?'/assignments?view=mine':'/assignments');search();});
-  document.querySelector('#refresh-list').onclick=()=>search();
   await search();
 }
 
