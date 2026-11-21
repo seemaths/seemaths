@@ -87,6 +87,12 @@ class Database:
             for statement in (ROOT / 'schema.sql').read_text().split(';'):
                 if statement.strip():
                     db.execute(statement)
+            # Upgrade legacy local labels without changing assignment IDs or progress.
+            for row in db.execute('SELECT id,reference FROM assignments WHERE length(reference)<>4 ORDER BY created_at,id').fetchall():
+                value=int(row['reference'][-4:])
+                while db.execute('SELECT id FROM assignments WHERE reference=?',(f'{value:04d}',)).fetchone():
+                    value=(value+1)%10000
+                db.execute('UPDATE assignments SET reference=? WHERE id=?',(f'{value:04d}',row['id']))
             if 'active_seconds' not in {row['name'] for row in db.execute('PRAGMA table_info(participants)').fetchall()}:
                 db.execute('ALTER TABLE participants ADD COLUMN active_seconds INTEGER NOT NULL DEFAULT 0 CHECK (active_seconds BETWEEN 0 AND 604800)')
 
@@ -211,7 +217,7 @@ def create_app(database_url=None, now=None, rate_secret=None):
         cleanup()
         identifier, credential = identifier or str(uuid4()), secrets.token_urlsafe(32)
         # Numeric references are labels, never authorization credentials.
-        reference = f'{secrets.randbelow(100_000_000):08d}'
+        reference = f'{secrets.randbelow(10_000):04d}'
         created = current_time()
         with db.connect() as tx:
             if db.postgres:
@@ -226,7 +232,7 @@ def create_app(database_url=None, now=None, rate_secret=None):
             if tx.execute('SELECT COUNT(*) AS n FROM assignments WHERE expires_at>?', (created,)).fetchone()['n'] >= 1000:
                 raise HTTPException(503, 'Assignments are at capacity. Please try again later.')
             while tx.execute('SELECT id FROM assignments WHERE reference=?', (reference,)).fetchone():
-                reference = f'{secrets.randbelow(100_000_000):08d}'
+                reference = f'{secrets.randbelow(10_000):04d}'
             tx.execute('INSERT INTO assignments(id,reference,management_hash,recipe,created_at,expires_at) VALUES (?,?,?,?,?,?)',
                        (identifier, reference, digest(credential), recipe.model_dump_json(exclude_none=True), created, created+WEEK))
             result = public(assignment(tx, identifier))
@@ -244,9 +250,21 @@ def create_app(database_url=None, now=None, rate_secret=None):
         return create_record(recipe, request, identifier, expose_management=False)
 
     @app.get('/api/assignments')
-    def search(request: Request, q: str = '', offset: int = 0):
+    def search(request: Request, q: str = '', offset: int = 0, ids: str = ''):
         if len(q) > 2048 or offset < 0 or offset > 10000:
             raise HTTPException(422, 'Invalid search.')
+        if ids:
+            values=ids.split(',')
+            if len(values)>100:
+                raise HTTPException(422, 'Look up at most 100 assignments at a time.')
+            try:
+                identifiers=list({str(UUID(value)) for value in values})
+            except ValueError:
+                raise HTTPException(422, 'Invalid assignment IDs.')
+            with db.connect() as tx:
+                rate(tx, 'search:'+peer(request), 90, 60)
+                rows=tx.execute('SELECT * FROM assignments WHERE expires_at>? AND id IN ('+','.join('?' for _ in identifiers)+')', (current_time(),*identifiers)).fetchall()
+            return {'assignments':[public(row) for row in rows]}
         query = q.strip()
         if query.startswith(('http://', 'https://', '/')):
             parsed = urlsplit(query)

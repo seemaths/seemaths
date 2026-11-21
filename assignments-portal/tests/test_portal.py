@@ -221,3 +221,20 @@ def test_assignment_link_and_uuid_find_public_progress_without_identity(portal):
     assert client.patch(f"/api/assignments/{item['id']}/manage",headers=manage(item),json={'closed':True}).status_code==200
     assert client.get('/api/teachers/12345678').status_code==404
     assert 'teacher=' not in client.get(f"/a/{item['id']}",follow_redirects=False).headers['location']
+
+
+def test_four_digit_references_are_unique_and_expire_after_seven_days(portal,monkeypatch):
+    client,now,_=portal
+    candidates=iter([42,42,43])
+    monkeypatch.setattr('app.secrets.randbelow',lambda bound:next(candidates))
+    first=assignment(client)
+    second=assignment(client)
+    assert first['reference']=='0042' and second['reference']=='0043'
+    assert first['expiresAt']-first['createdAt']==WEEK
+    assert client.get('/api/assignments',params={'ids':first['id']+','+second['id']}).status_code==200
+    lookup=client.get('/api/assignments',params={'ids':first['id']+','+second['id']}).json()['assignments']
+    assert {a['reference'] for a in lookup}=={'0042','0043'}
+    assert 'managementToken' not in str(lookup)
+    assert client.get('/api/assignments',params={'ids':'invalid'}).status_code==422
+    now[0]+=WEEK
+    assert client.get('/api/assignments',params={'ids':first['id']}).json()['assignments']==[]

@@ -1,3 +1,4 @@
+import {assignmentDateLabel} from '/assignment-display.js?v=1';
 import {studentAssignmentURL} from '/assignment-links.js?v=1';
 import '/assignment-library.js?v=1';
 const root = document.querySelector("#app");
@@ -24,7 +25,7 @@ const escape = (value) =>
         c
       ],
   );
-const ref = (value) => `${value.slice(0, 4)}-${value.slice(4)}`;
+const ref = value => String(value).padStart(4,"0");
 const date = (timestamp) =>
   new Date(timestamp * 1000).toLocaleDateString(undefined, {
     day: "numeric",
@@ -192,17 +193,30 @@ function errorPage(error) {
   root.innerHTML = `<section class="error-page"><p class="eyebrow">See Maths assignments</p><h1>${error.status === 410 ? "Assignment expired" : error.status === 403 ? "Private link needed" : "Could not open this page"}</h1><p class="muted">${escape(error.message)}</p><div class="actions"><a class="primary" href="/assignments">Assignments</a><button class="secondary" id="retry">Try again</button></div></section>`;
   document.querySelector("#retry").onclick = () => location.reload();
 }
-const shortDate = timestamp => new Date(timestamp*1000).toLocaleDateString('en-AU',{day:'numeric',month:'short'});
 function listItem(item) {
   const createdAt=item.createdAt ?? item.expiresAt-(config.lifetimeDays || 7)*86400;
-  return `<article class="assignment-item"><a class="assignment-number reference" href="/manage/${item.id}" aria-label="View assignment ${ref(item.reference)}">${ref(item.reference)}</a><h3 title="${escape(topicLabel(item.recipe.topic))}"><a href="/manage/${item.id}">${escape(topicLabel(item.recipe.topic))}</a></h3><span>${item.recipe.count} ${item.recipe.player==='arcade' ? 'stages' : item.recipe.count === 1 ? 'question' : 'questions'}</span><span class="assignment-dates">${shortDate(createdAt)} (expires ${shortDate(item.expiresAt)})</span><button class="get-assignment-link" type="button" data-assignment-id="${item.id}" aria-label="Get link for assignment ${ref(item.reference)}">Get Link<span class="link-copied-tag" role="status" aria-live="polite" hidden>Copied</span></button></article>`;
+  return `<article class="assignment-item"><a class="assignment-number reference" href="/manage/${item.id}" aria-label="View assignment ${ref(item.reference)}">${ref(item.reference)}</a><h3 title="${escape(topicLabel(item.recipe.topic))}"><a href="/manage/${item.id}">${escape(topicLabel(item.recipe.topic))}</a></h3><span>${item.recipe.count} ${item.recipe.player==='arcade' ? 'stages' : item.recipe.count === 1 ? 'question' : 'questions'}</span><span class="assignment-dates">${assignmentDateLabel(createdAt,item.expiresAt)}</span><button class="get-assignment-link" type="button" data-assignment-id="${item.id}" aria-label="Copy link for assignment ${ref(item.reference)}"><span>Copy link</span><span class="link-copied-tick" aria-hidden="true">✓</span><span class="link-copy-status visually-hidden" role="status" aria-live="polite"></span></button></article>`;
 }
 function searchTerm(value) {
   let term=value.trim();
   try {const url=new URL(term,location.origin);if(term.includes('/') || url.searchParams.has('assignment')) term=url.searchParams.get('assignment') || url.pathname.split('/').filter(Boolean).at(-1) || term;} catch {}
   return term.toLowerCase().replaceAll('-','');
 }
+async function refreshLegacyReferences() {
+  const saved=savedAssignments();
+  if(!saved.some(a=>String(a.reference).length!==4)) return;
+  try {
+    const current=new Map();
+    for(let offset=0;offset<saved.length;offset+=100){
+      const ids=saved.slice(offset,offset+100).map(a=>a.id).join(',');
+      const data=await api(`/api/assignments?ids=${encodeURIComponent(ids)}`);
+      for(const item of data.assignments)current.set(item.id,item);
+    }
+    write(mineKey,saved.filter(a=>current.has(a.id)).map(a=>({...a,...current.get(a.id)})));
+  } catch {toast('Could not update saved assignment numbers. Reopen the page to try again.');}
+}
 async function home() {
+  await refreshLegacyReferences();
   const saved=savedAssignments();
   let mine=new URLSearchParams(location.search).get('view')==='mine' && saved.length>0;
   root.innerHTML=`<h1 class="visually-hidden">Assignments</h1>
@@ -227,7 +241,7 @@ async function home() {
       target.innerHTML=rows.length?rows.map(a=>listItem(a)).join(''):'<p class="muted">No active assignments found.</p>';
       target.querySelectorAll('.get-assignment-link').forEach(button=>{button.onclick=async()=>{
         button.disabled=true;
-        try {const item=rows.find(a=>a.id===button.dataset.assignmentId);if(await copy(studentAssignmentURL(item),null)) button.querySelector('.link-copied-tag').hidden=false;}
+        try {const item=rows.find(a=>a.id===button.dataset.assignmentId);if(await copy(studentAssignmentURL(item),null)){button.classList.add('is-copied');button.querySelector('.link-copy-status').textContent='Link copied';}}
         finally {button.disabled=false;}
       };});
       document.querySelector('#pagination').innerHTML=`${offset?'<button class="secondary" id="previous-page">Previous</button>':''}${rows.length===25?'<button class="secondary" id="next-page">More assignments</button>':''}`;

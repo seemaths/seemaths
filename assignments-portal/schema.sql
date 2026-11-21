@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS assignments (
- id TEXT PRIMARY KEY, reference TEXT NOT NULL UNIQUE,
+ id TEXT PRIMARY KEY, reference TEXT NOT NULL UNIQUE CHECK(length(reference)=4),
  management_hash TEXT NOT NULL, recipe TEXT NOT NULL,
  created_at BIGINT NOT NULL, expires_at BIGINT NOT NULL,
  closed INTEGER NOT NULL DEFAULT 0 CHECK (closed IN (0,1)),

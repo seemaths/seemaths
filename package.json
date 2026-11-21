@@ -10,8 +10,8 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "dev": "wrangler dev",
-    "test": "node --test worker.test.mjs assignments-portal/tests/bridge.test.mjs assignments-portal/tests/outcomes.test.mjs assignments-portal/tests/assignment-links.test.mjs assignments-portal/tests/student-events.test.mjs",
-    "check": "node --check worker.js && node --check public/assignment-library.js && node --check public/assignment-links.js && node --check public/script.js && node --check public/student-player.js && node --check public/student-session.js && node --check public/progress-outcomes.js && node --check assignments-portal/static/app.js && node --check assignments-portal/integration/quode-assignment-bridge.js",
+    "test": "node --test worker.test.mjs assignments-portal/tests/bridge.test.mjs assignments-portal/tests/outcomes.test.mjs assignments-portal/tests/assignment-links.test.mjs assignments-portal/tests/assignment-display.test.mjs assignments-portal/tests/student-events.test.mjs",
+    "check": "node --check worker.js && node --check public/assignment-library.js && node --check public/assignment-display.js && node --check public/assignment-links.js && node --check public/script.js && node --check public/student-player.js && node --check public/student-session.js && node --check public/progress-outcomes.js && node --check assignments-portal/static/app.js && node --check assignments-portal/integration/quode-assignment-bridge.js",
     "deploy": "wrangler deploy"
   },
   "devDependencies": {
