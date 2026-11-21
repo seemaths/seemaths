@@ -1055,7 +1055,7 @@ dialog .actions {
 
 /* The reference is the primary row label; secondary details stay compact. */
 .assignment-item{grid-template-columns:130px minmax(110px,1fr) max-content max-content max-content;gap:22px}
-.assignment-item .assignment-number{font-size:1.25rem;font-weight:750;color:var(--ink)}
+.assignment-item .assignment-number{font-family:var(--font);font-size:1.0625rem;font-weight:400;color:var(--ink)}
 .assignment-item h3 a{color:var(--ink)}
 .assignment-dates{font-variant-numeric:tabular-nums}
 .get-assignment-link{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:126px;min-height:40px;padding:8px 12px;border:0;border-radius:10px;background:#e6f1ed;color:var(--teal-dark);font-size:14px;font-weight:700;white-space:nowrap}
