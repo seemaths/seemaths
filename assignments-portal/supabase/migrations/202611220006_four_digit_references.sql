@@ -12,7 +12,7 @@ BEGIN
         END LOOP;
         UPDATE assignments_portal.assignments SET reference=lpad(candidate::text,4,'0') WHERE id=item.id;
     END LOOP;
-END
+END;
 $migration$;
 ALTER TABLE assignments_portal.assignments DROP CONSTRAINT IF EXISTS assignments_reference_four_digits;
 ALTER TABLE assignments_portal.assignments ADD CONSTRAINT assignments_reference_four_digits CHECK (reference ~ '^[0-9]{4}$');
