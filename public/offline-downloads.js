@@ -38,8 +38,24 @@ export function downloadActivity({readRecipe, planActivity}) {
     panel.dataset.completed = String(finished.size); panel.dataset.total = String(total);
     position();
   }
+  let registrationPromise;
+  async function offlineRegistration() {
+    if (!registrationPromise) {
+      registrationPromise = (async () => {
+        let timer;
+        try {
+          return await Promise.race([
+            navigator.serviceWorker.register('/sw.js', {scope:'/', updateViaCache:'none'})
+              .then(() => navigator.serviceWorker.ready),
+            new Promise((_, reject) => {timer = setTimeout(() => reject(Error('Offline storage did not start. Please retry.')), 15000);}),
+          ]);
+        } finally {clearTimeout(timer);}
+      })().catch(error => {registrationPromise = null; throw error;});
+    }
+    return registrationPromise;
+  }
   async function cache(urls) {
-    const registration = await navigator.serviceWorker.ready;
+    const registration = await offlineRegistration();
     const worker = navigator.serviceWorker.controller || registration.active;
     if (!worker) throw Error('Offline storage is not ready.');
     if (registration.waiting) {
@@ -66,7 +82,7 @@ export function downloadActivity({readRecipe, planActivity}) {
     });
   }
   async function upgradeWorker() {
-    const registration = await navigator.serviceWorker.ready;
+    const registration = await offlineRegistration();
     const previous = navigator.serviceWorker.controller;
     state.activityOffline = 'updating'; label.textContent = 'Updating downloads…';
     return new Promise((resolve, reject) => {

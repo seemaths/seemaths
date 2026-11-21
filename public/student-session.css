@@ -22,3 +22,9 @@ body:has(.seemaths-opening) .seemaths-activity-bar{display:none!important}
 @media print{.seemaths-downloads{display:none!important}}
 #app .paper-heading-with-layout .seemaths-student-id{margin-left:auto}
 @media(max-width:650px){#app .paper-heading-with-layout:has(.seemaths-student-id){justify-content:space-between}#app .paper-heading-with-layout:has(.seemaths-student-id) .paper-brand{display:flex}#app .paper-heading-with-layout:has(.seemaths-student-id) .paper-title-detail{display:none}}
+
+@media screen {
+  #app.questionnaire{--psat-primary:#173b43}
+  #app .paper-heading-with-layout,#app .paper-footer{background:#173b43;color:#fff;border-color:#ffffff24}
+  #app .paper-heading-with-layout .paper-home-link{color:inherit}
+}
