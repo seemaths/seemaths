@@ -55,10 +55,11 @@ def test_join_retries_and_concurrent_number_allocation(portal):
     key = secrets.token_urlsafe(32)
     first, _ = student(client, item, key)
     again, _ = student(client, item, key)
-    assert first['id'] == again['id'] and first['number'] == 1
+    assert first['id'] == again['id'] and first['number'] == again['number']
     with ThreadPoolExecutor(max_workers=6) as pool:
         numbers = list(pool.map(lambda _: student(client, item)[0]['number'], range(12)))
-    assert sorted(numbers) == list(range(2, 14))
+    assert len(set(numbers + [first['number']])) == 13
+    assert all(0 <= number <= 99 for number in numbers + [first['number']])
 
 
 def test_progress_retry_out_of_order_and_completion(portal):
@@ -147,6 +148,7 @@ def test_expiry_hides_blocks_writes_then_cleanup_deletes(portal):
     with db.connect() as tx:
         assert tx.execute('SELECT COUNT(*) AS n FROM assignments').fetchone()['n'] == 0
         assert tx.execute('SELECT COUNT(*) AS n FROM participants').fetchone()['n'] == 0
+    assert client.get(path).status_code == 404
 
 
 def test_limits_and_cross_origin_requests(portal):
@@ -164,9 +166,8 @@ def test_limits_and_cross_origin_requests(portal):
 def test_max_students_and_management_references_are_not_keys(portal):
     client, _, db = portal
     item = assignment(client)
-    with db.connect() as tx:
-        tx.execute('UPDATE assignments SET next_number=100 WHERE id=?', (item['id'],))
-    assert student(client, item)[0]['number'] == 100
+    numbers = [student(client, item)[0]['number'] for _ in range(100)]
+    assert set(numbers) == set(range(100))
     assert client.post(f"/api/assignments/{item['id']}/join", json={'credential': secrets.token_urlsafe(32)}).status_code == 409
     assert client.patch(f"/api/assignments/{item['id']}/manage", json={'closed':True}, headers={'Authorization': f"Bearer {item['reference']}"}).status_code == 403
 
@@ -221,6 +222,29 @@ def test_assignment_link_and_uuid_find_public_progress_without_identity(portal):
     assert client.patch(f"/api/assignments/{item['id']}/manage",headers=manage(item),json={'closed':True}).status_code==200
     assert client.get('/api/teachers/12345678').status_code==404
     assert 'teacher=' not in client.get(f"/a/{item['id']}",follow_redirects=False).headers['location']
+
+
+def test_arcade_recipe_preserves_codes_and_launch_choice(portal):
+    client, _, _ = portal
+    stages = [{'quode':'number-decimal_order','title':'Decimal order'}]
+    item = assignment(client, count=1, topic='number', player='arcade', stages=stages, levelMin=2, levelMax=4)
+    recipe = client.get('/api/assignments/'+item['id']).json()['recipe']
+    assert recipe['stages'] == stages and recipe['player'] == 'arcade'
+    redirect = client.get('/a/'+item['id'], follow_redirects=False).headers['location']
+    assert 'player=arcade' in redirect and 'levelMin=2' in redirect and 'stages=' not in redirect
+    for changes in [{'stages':None}, {'stages':[]}, {'count':2}, {'mode':'exam'}, {'topic':'geometry'}]:
+        response = client.post('/api/assignments', json={**recipe, **changes})
+        assert response.status_code == 422, response.text
+
+
+def test_standard_legacy_resolve_identity_is_unchanged(portal):
+    from uuid import uuid5, NAMESPACE_URL
+    import json
+    client, _, _ = portal
+    legacy = dict(topic='random', mode='practice', count=1, levelMin=1, levelMax=5, minutes=30, blueprint=None)
+    expected = str(uuid5(NAMESPACE_URL,'seemaths:activity:'+json.dumps(legacy,sort_keys=True)))
+    assert client.post('/api/assignments/resolve',json=legacy).json()['id'] == expected
+    assert client.post('/api/assignments/resolve',json={**legacy,'player':'standard'}).json()['id'] == expected
 
 
 def test_four_digit_references_are_unique_and_expire_after_seven_days(portal,monkeypatch):

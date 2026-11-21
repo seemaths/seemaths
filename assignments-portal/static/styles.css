@@ -485,6 +485,13 @@ select {
 .dashboard-heading {
   margin-bottom: 24px;
 }
+.dashboard-topic { display:flex; align-items:center; flex-wrap:wrap; gap:20px; }
+.dashboard-topic h1 { margin:0; }
+.dashboard-topic #copy-student { flex:none; padding:9px 15px; font-size:.875rem; }
+.heading-meta .refresh-progress { display:inline-grid; place-items:center; flex:none; width:44px; height:30px; min-height:30px; padding:5px 12px; border:1px solid var(--line); border-radius:999px; background:transparent; color:var(--muted); }
+.heading-meta .refresh-progress:hover { background:#edf5f3; color:var(--teal-dark); }
+.refresh-progress svg { width:18px; height:18px; }
+.dashboard-footer > .actions { margin-left:auto; }
 .heading-meta {
   display: flex;
   gap: 12px;
@@ -748,9 +755,13 @@ iframe {
   font-size: 0.8125rem;
 }
 .loading {
-  color: var(--muted);
-  padding: 30px 0;
+  position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(280px,75vw);height:6px;overflow:hidden;border-radius:999px;
+  background:#e6ebef;
 }
+.loading > span {display:block;width:35%;height:100%;border-radius:inherit;background:var(--teal-dark);animation:loading-progress 1s ease-in-out infinite}
+@keyframes loading-progress {from{transform:translateX(-120%)}to{transform:translateX(385%)}}
+@media(prefers-reduced-motion:reduce){.loading > span{animation:none;transform:translateX(95%)}}
 .storage-warning {
   margin-bottom: 20px;
 }
@@ -1062,10 +1073,13 @@ dialog .actions {
 .get-assignment-link:hover{background:#d8ebe3}
 .link-copied-tag{padding:2px 4px;border-radius:4px;background:#c9efd7;color:#166534;font-size:10px;font-weight:750}
 
-/* The tick always occupies space, so copying never shifts the button label. */
+/* Swap icons in a fixed slot so copying keeps the label and row still. */
 .get-assignment-link{width:126px;min-width:126px}
-.link-copied-tick{display:inline-block;flex:none;width:18px;visibility:hidden;color:#21824a;font-size:17px;font-weight:700;text-align:right}
-.get-assignment-link.is-copied .link-copied-tick{visibility:visible}
+.link-copy-icon{display:inline-grid;place-items:center;flex:none;width:18px;height:18px}
+.link-copy-icon svg{grid-area:1/1;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.link-copy-icon .link-copied-tick{display:none;color:#21824a}
+.get-assignment-link.is-copied .link-copy-symbol{display:none}
+.get-assignment-link.is-copied .link-copied-tick{display:block}
 
 .reload-assignments{grid-column:1;justify-self:end;display:grid;place-items:center;flex:none;width:40px;height:40px;padding:10px;border:1px solid var(--line);border-radius:50%;background:#fff;color:var(--muted)}
 .reload-assignments:hover{background:#edf5f3;color:var(--teal-dark)}
@@ -1073,3 +1087,5 @@ dialog .actions {
 .assignment-topic{display:flex;align-items:center;gap:9px;min-width:0}
 .assignment-topic h3{min-width:0}
 .student-count{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:25px;height:25px;padding:0 5px;border-radius:50%;background:#e5f1ed;color:var(--teal-dark);font-size:12px;font-weight:650;font-variant-numeric:tabular-nums}
+
+.assignment-reference-tag{display:inline-flex;align-items:center;margin:0 0 14px;padding:5px 14px;border-radius:999px;background:var(--teal-dark);color:#fff;font-size:1rem;font-weight:750;letter-spacing:.08em;font-variant-numeric:tabular-nums}

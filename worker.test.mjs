@@ -7,6 +7,58 @@ function assets() {
   return {calls, env:{ASSETS:{fetch:async request => { calls.push(request); return new Response('static asset'); }}}};
 }
 
+test('assignment pages and assets use static hosting while progress APIs stay private',async()=>{
+  const {env,calls}=assets();env.STATIC_QUODES='true';env.ASSIGNMENTS_ORIGIN='https://assignments.example';
+  await withFetch(async request=>{
+    assert.equal(new URL(request.url).origin,'https://assignments.example');
+    assert.equal(new URL(request.url).pathname,'/api/assignments/example/manage');
+    return Response.json({students:[]});
+  },async()=>{
+    for(const path of ['/manage/example','/a/example','/assignments','/assets/app.js'])
+      assert.equal(await(await worker.fetch(new Request('https://seemaths.org'+path),env)).text(),'static asset');
+    const api=await worker.fetch(new Request('https://seemaths.org/api/assignments/example/manage'),env);
+    assert.equal(api.headers.get('Cache-Control'),'no-store');
+  });
+  assert.deepEqual(calls.map(request=>new URL(request.url).pathname),['/assignment-dashboard/','/assignment-dashboard/','/assignment-dashboard/','/assets/app.js']);
+});
+
+test('static deployments never contact the old maths server, including generation POSTs', async () => {
+  const {env,calls}=assets();env.STATIC_QUODES='true';
+  await withFetch(()=>{throw Error('Static maths must not use an upstream');},async()=>{
+    for(const path of ['/play/','/runtime/questionnaire.js','/api/activities/js-catalog','/api/quodes/number-decimal_order','/number-decimal_order/web/generator.mjs']) {
+      assert.equal(await(await worker.fetch(new Request('https://seemaths.org'+path),env)).text(),'static asset');
+    }
+    for(const path of ['/api/activities','/api/quodes/number-decimal_order/exercises']) {
+      const response=await worker.fetch(new Request('https://seemaths.org'+path,{method:'POST'}),env);
+      assert.equal(response.status,405);
+      assert.match((await response.json()).detail,/browser/);
+    }
+  });
+  assert.equal(calls.length,5);
+});
+
+test('static Math Space and Arcade roots read their deployed assets',async()=>{
+  const {env,calls}=assets();env.STATIC_QUODES='true';
+  await withFetch(()=>{throw Error('Unexpected upstream');},async()=>{
+    await worker.fetch(new Request('https://mathspace.seemaths.org/'),env);
+    await worker.fetch(new Request('https://arcade.seemaths.org/'),env);
+  });
+  assert.deepEqual(calls.map(request=>new URL(request.url).pathname),['/mathspace-player/','/exercise-player.html']);
+});
+
+test('static Math Space preserves root-relative PWA scope',async()=>{
+  const env={STATIC_QUODES:'true',ASSETS:{fetch:async request=>{
+    const path=new URL(request.url).pathname;
+    if(path.endsWith('manifest.webmanifest'))return Response.json({id:'/mathspace-player/',scope:'/mathspace-player/',start_url:'/mathspace-player/'});
+    if(path.endsWith('service-worker.js'))return new Response('// worker');
+    return new Response('<head><link rel="manifest" href="/mathspace-player/manifest.webmanifest"></head><script data-app="mathspace" defer></script>',{headers:{'Content-Type':'text/html'}});
+  }}};
+  const math=await(await worker.fetch(new Request('https://mathspace.seemaths.org/'),env)).text();
+  assert.match(math,/data-scope="\/"/);assert.match(math,/href="\/manifest.webmanifest"/);
+  assert.equal((await(await worker.fetch(new Request('https://mathspace.seemaths.org/manifest.webmanifest'),env)).json()).scope,'/');
+  assert.equal((await worker.fetch(new Request('https://mathspace.seemaths.org/service-worker.js'),env)).headers.get('Service-Worker-Allowed'),'/');
+});
+
 test('assignment APIs route to the portal while play receives the student session module', async () => {
   const {env}=assets();env.ASSIGNMENTS_ORIGIN='https://assignments.example';
   await withFetch(async (request, options) => {
@@ -30,17 +82,16 @@ test('assignment APIs route to the portal while play receives the student sessio
   });
 });
 
-test('Arcade domain opens its player with relative assets on the same host', async () => {
+test('Arcade and Standard PIN routes serve the local entry shell without upstream requests', async () => {
   const {env,calls}=assets();
-  await withFetch(async request => {
-    assert.equal(new URL(request.url).pathname, '/arcade-player/');
-    assert.equal(new URL(request.url).search, '?from=seemaths');
-    return new Response('<html><head></head><body>Arcade</body></html>');
-  }, async () => {
-    const response=await worker.fetch(new Request('https://arcade.seemaths.org/?from=seemaths'),env);
-    assert.match(await response.text(), /<base href="\/arcade-player\/">/);
+  await withFetch(()=>{throw Error('Unexpected upstream');},async()=>{
+    for(const host of ['arcade.seemaths.org','player.seemaths.org'])for(const route of ['/','/0705']){
+      const response=await worker.fetch(new Request(`https://${host}${route}`),env);
+      assert.equal(await response.text(),'static asset');
+      assert.equal(response.headers.get('Cache-Control'),'no-store');
+    }
   });
-  assert.equal(calls.length,0);
+  assert.deepEqual(calls.map(request=>new URL(request.url).pathname),Array(4).fill('/exercise-player.html'));
 });
 
 async function withFetch(mock, action) {

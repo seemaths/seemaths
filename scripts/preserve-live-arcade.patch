@@ -1,0 +1,148 @@
+--- a/runtime/arcade/app.js
++++ b/runtime/arcade/app.js
+@@ -1,5 +1,5 @@
+ import { fetchExercise } from "/runtime/exercise-generation.mjs";
+-import {freshState,stageIndex,chooseType,present,help,answer,event,localStore,validateState,rewardSettings} from './engine.js';
++import {freshState,stageIndex,chooseType,present,help,answer,event,localStore,validateState,rewardSettings,COIN_SLIDER} from './engine.js';
+ import {renderQuestion} from '/runtime/question-sharing.js';
+ import {mountQuodeTeaching} from '/runtime/quode-teaching.js';
+ import {answersEquivalent} from '/runtime/questionnaire-answer.js';
+@@ -232,9 +232,12 @@
+   const form=el('form','reward-form'),settings=rewardSettings(state),fields=[];
+   function row(label,range,type){
+     const line=el('div','reward-slider-row'),track=el('div','dual-range'),low=el('output','range-value'),high=el('output','range-value');line.setAttribute('role','group');line.setAttribute('aria-label',label);line.append(el('span','range-title',label),low,track,high);
++    const marks=el('div','range-marks');marks.setAttribute('aria-hidden','true');
++    for(let value=COIN_SLIDER.min;value<=COIN_SLIDER.max;value+=COIN_SLIDER.step)marks.append(el('span'));
++    track.append(marks);
+     const inputs=['min','max'].map(bound=>{
+       const output=bound==='min'?low:high,input=el('input');output.value=String(range[bound]);
+-      input.type='range';input.min='1';input.max=String(Math.max(300,range.max));input.step='1';input.value=range[bound];input.setAttribute('aria-label',`${label} ${bound==='min'?'minimum':'maximum'} coins`);
++      input.type='range';input.min=String(COIN_SLIDER.min);input.max=String(COIN_SLIDER.max);input.step=String(COIN_SLIDER.step);input.value=range[bound];input.setAttribute('aria-label',`${label} ${bound==='min'?'minimum':'maximum'} coins`);
+       input.oninput=()=>{output.value=input.value;const other=inputs[bound==='min'?1:0];if(bound==='min'&&Number(input.value)>Number(other.value)||bound==='max'&&Number(input.value)<Number(other.value)){other.value=input.value;other.dispatchEvent(new Event('input'));}paint();};
+       track.append(input);return input;
+     });
+--- a/arcade-player/app.js
++++ b/arcade-player/app.js
+@@ -1,5 +1,5 @@
+ import { fetchExercise } from "/runtime/exercise-generation.mjs";
+-import {freshState,stageIndex,chooseType,present,help,answer,event,localStore,validateState,rewardSettings} from './engine.js';
++import {freshState,stageIndex,chooseType,present,help,answer,event,localStore,validateState,rewardSettings,COIN_SLIDER} from './engine.js';
+ import {renderQuestion} from '/runtime/question-sharing.js';
+ import {mountQuodeTeaching} from '/runtime/quode-teaching.js';
+ import {answersEquivalent} from '/runtime/questionnaire-answer.js';
+@@ -232,9 +232,12 @@
+   const form=el('form','reward-form'),settings=rewardSettings(state),fields=[];
+   function row(label,range,type){
+     const line=el('div','reward-slider-row'),track=el('div','dual-range'),low=el('output','range-value'),high=el('output','range-value');line.setAttribute('role','group');line.setAttribute('aria-label',label);line.append(el('span','range-title',label),low,track,high);
++    const marks=el('div','range-marks');marks.setAttribute('aria-hidden','true');
++    for(let value=COIN_SLIDER.min;value<=COIN_SLIDER.max;value+=COIN_SLIDER.step)marks.append(el('span'));
++    track.append(marks);
+     const inputs=['min','max'].map(bound=>{
+       const output=bound==='min'?low:high,input=el('input');output.value=String(range[bound]);
+-      input.type='range';input.min='1';input.max=String(Math.max(300,range.max));input.step='1';input.value=range[bound];input.setAttribute('aria-label',`${label} ${bound==='min'?'minimum':'maximum'} coins`);
++      input.type='range';input.min=String(COIN_SLIDER.min);input.max=String(COIN_SLIDER.max);input.step=String(COIN_SLIDER.step);input.value=range[bound];input.setAttribute('aria-label',`${label} ${bound==='min'?'minimum':'maximum'} coins`);
+       input.oninput=()=>{output.value=input.value;const other=inputs[bound==='min'?1:0];if(bound==='min'&&Number(input.value)>Number(other.value)||bound==='max'&&Number(input.value)<Number(other.value)){other.value=input.value;other.dispatchEvent(new Event('input'));}paint();};
+       track.append(input);return input;
+     });
+--- a/runtime/arcade/engine.js
++++ b/runtime/arcade/engine.js
+@@ -1,4 +1,7 @@
+ export const uid = () => globalThis.crypto.randomUUID();
++// Match SitNStudy's InjectionRewardsSettings slider contract.
++export const COIN_SLIDER = Object.freeze({min:1,max:20,step:1});
++const defaultRewards = count => ({defaultsVersion:3,standard:Array.from({length:count},(_,i)=>i===3?{min:10,max:15}:{min:5,max:10}),bonus:{min:10,max:20}});
+ const stats = () => ({attempted:0, correct:0, wrong:0, helped:0});
+ const runs = value => Array.isArray(value) ? value : [];
+ function recordRun(state,active,value){
+@@ -11,21 +14,30 @@
+   target.streakRuns=runs(target.streakRuns);return [...target.streakRuns];
+ }
+ export function rewardSettings(state){
+-  const settings=state.rewardSettings??={defaultsVersion:2,standard:state.exercises.map(()=>({min:5,max:10})),bonus:{min:20,max:60}};
++  const settings=state.rewardSettings??=defaultRewards(state.exercises.length);
+   // Old saves had separate per-level settings. Keep the current level's range
+   // when migrating to one range per exercise; earned coins are untouched.
+   settings.standard=settings.standard.map((range,i)=>Array.isArray(range)?{...range[Math.min(state.exercises[i].cleared,4)]}:range);
++  // Managed rewards belong to the portal; never replace its supplied values.
++  if(state.managedRewards)return settings;
+   if((settings.defaultsVersion||1)<2){
+     settings.standard=settings.standard.map(range=>range.min===10&&range.max===30?{min:5,max:10}:range);
+     if(settings.bonus.min===30&&settings.bonus.max===90)settings.bonus={min:20,max:60};
+     settings.defaultsVersion=2;
+   }
++  if(settings.defaultsVersion<3){
++    if(settings.standard[3]?.min===5&&settings.standard[3]?.max===10)settings.standard[3]={min:10,max:15};
++    if(settings.bonus.min===20&&settings.bonus.max===60)settings.bonus={min:10,max:20};
++    settings.defaultsVersion=3;
++  }
++  const clamp=value=>Math.max(COIN_SLIDER.min,Math.min(COIN_SLIDER.max,Math.round(value)));
++  for(const range of [...settings.standard,settings.bonus]){range.min=clamp(range.min);range.max=clamp(range.max);}
+   return settings;
+ }
+ export function rewardRange(state,type,level,bonus=false){const settings=rewardSettings(state);return bonus?settings.bonus:settings.standard[type];}
+ export function freshState(campaign) {
+   return {schema:1,campaign:campaign.id,coins:0,rewards:[],events:[],seen:[],active:null,
+-    rewardSettings:{defaultsVersion:2,standard:campaign.exercises.map(()=>({min:5,max:10})),bonus:{min:20,max:60}},
++    rewardSettings:defaultRewards(campaign.exercises.length),
+     exercises:campaign.exercises.map(x=>({id:x.id,cleared:0,streak:0,streakRuns:[],counts:[0,0,0,0,0],stats:stats()})),
+     bonus:{done:false,streaks:campaign.exercises.map(()=>0),streakRuns:[],correct:0,stats:stats()}};
+ }
+--- a/arcade-player/engine.js
++++ b/arcade-player/engine.js
+@@ -1,4 +1,7 @@
+ export const uid = () => globalThis.crypto.randomUUID();
++// Match SitNStudy's InjectionRewardsSettings slider contract.
++export const COIN_SLIDER = Object.freeze({min:1,max:20,step:1});
++const defaultRewards = count => ({defaultsVersion:3,standard:Array.from({length:count},(_,i)=>i===3?{min:10,max:15}:{min:5,max:10}),bonus:{min:10,max:20}});
+ const stats = () => ({attempted:0, correct:0, wrong:0, helped:0});
+ const runs = value => Array.isArray(value) ? value : [];
+ function recordRun(state,active,value){
+@@ -11,21 +14,30 @@
+   target.streakRuns=runs(target.streakRuns);return [...target.streakRuns];
+ }
+ export function rewardSettings(state){
+-  const settings=state.rewardSettings??={defaultsVersion:2,standard:state.exercises.map(()=>({min:5,max:10})),bonus:{min:20,max:60}};
++  const settings=state.rewardSettings??=defaultRewards(state.exercises.length);
+   // Old saves had separate per-level settings. Keep the current level's range
+   // when migrating to one range per exercise; earned coins are untouched.
+   settings.standard=settings.standard.map((range,i)=>Array.isArray(range)?{...range[Math.min(state.exercises[i].cleared,4)]}:range);
++  // Managed rewards belong to the portal; never replace its supplied values.
++  if(state.managedRewards)return settings;
+   if((settings.defaultsVersion||1)<2){
+     settings.standard=settings.standard.map(range=>range.min===10&&range.max===30?{min:5,max:10}:range);
+     if(settings.bonus.min===30&&settings.bonus.max===90)settings.bonus={min:20,max:60};
+     settings.defaultsVersion=2;
+   }
++  if(settings.defaultsVersion<3){
++    if(settings.standard[3]?.min===5&&settings.standard[3]?.max===10)settings.standard[3]={min:10,max:15};
++    if(settings.bonus.min===20&&settings.bonus.max===60)settings.bonus={min:10,max:20};
++    settings.defaultsVersion=3;
++  }
++  const clamp=value=>Math.max(COIN_SLIDER.min,Math.min(COIN_SLIDER.max,Math.round(value)));
++  for(const range of [...settings.standard,settings.bonus]){range.min=clamp(range.min);range.max=clamp(range.max);}
+   return settings;
+ }
+ export function rewardRange(state,type,level,bonus=false){const settings=rewardSettings(state);return bonus?settings.bonus:settings.standard[type];}
+ export function freshState(campaign) {
+   return {schema:1,campaign:campaign.id,coins:0,rewards:[],events:[],seen:[],active:null,
+-    rewardSettings:{defaultsVersion:2,standard:campaign.exercises.map(()=>({min:5,max:10})),bonus:{min:20,max:60}},
++    rewardSettings:defaultRewards(campaign.exercises.length),
+     exercises:campaign.exercises.map(x=>({id:x.id,cleared:0,streak:0,streakRuns:[],counts:[0,0,0,0,0],stats:stats()})),
+     bonus:{done:false,streaks:campaign.exercises.map(()=>0),streakRuns:[],correct:0,stats:stats()}};
+ }
+--- a/runtime/arcade/style.css
++++ b/runtime/arcade/style.css
+@@ -59,3 +59,5 @@
+ .bonus-streak .streak-figure{width:100%;height:var(--bonus-icon-height);min-width:0}
+ .bonus-streak .streak-portrait{width:auto;height:var(--bonus-icon-height);max-width:none}
+ @media(max-width:700px){.streak-hud.hud.bonus-streaks{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;--bonus-icon-height:clamp(12px,7cqw,32px)}.question-topbar:has(.bonus-streaks){grid-template-columns:36px minmax(0,1fr);gap:8px;padding:12px 10px}.bonus-streak{padding:10px 6px}}
++
++.range-marks{position:absolute;left:9px;right:9px;top:16px;height:4px;display:flex;justify-content:space-between;align-items:center;pointer-events:none}.range-marks span{width:2px;height:2px;border-radius:50%;background:#f0eefb}
+--- a/arcade-player/style.css
++++ b/arcade-player/style.css
+@@ -59,3 +59,5 @@
+ .bonus-streak .streak-figure{width:100%;height:var(--bonus-icon-height);min-width:0}
+ .bonus-streak .streak-portrait{width:auto;height:var(--bonus-icon-height);max-width:none}
+ @media(max-width:700px){.streak-hud.hud.bonus-streaks{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;--bonus-icon-height:clamp(12px,7cqw,32px)}.question-topbar:has(.bonus-streaks){grid-template-columns:36px minmax(0,1fr);gap:8px;padding:12px 10px}.bonus-streak{padding:10px 6px}}
++
++.range-marks{position:absolute;left:9px;right:9px;top:16px;height:4px;display:flex;justify-content:space-between;align-items:center;pointer-events:none}.range-marks span{width:2px;height:2px;border-radius:50%;background:#f0eefb}

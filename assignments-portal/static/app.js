@@ -2,6 +2,7 @@ import {assignmentDateLabel} from '/assignment-display.js?v=2';
 import {studentAssignmentURL} from '/assignment-links.js?v=1';
 import '/assignment-library.js?v=1';
 const root = document.querySelector("#app");
+const reloadIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.75 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z"/></svg>';
 const topics = {
   random: "Mixed maths",
   algebra: "Algebra",
@@ -47,9 +48,9 @@ const ago = (timestamp) => {
       ? `${Math.floor(seconds / 60)} min ago`
       : `${Math.floor(seconds / 3600)} hr ago`;
 };
-const studentNumber = (number) => String(number).padStart(4, "0");
+const studentNumber = (number) => String(number).padStart(2, "0");
 const recipeSummary = (recipe) =>
-  `${recipe.count} questions · ${recipe.mode === "exam" ? "Exam" : "Practice"} · Levels ${recipe.levelMin}–${recipe.levelMax}`;
+  `${recipe.count} ${recipe.player === 'arcade' ? 'stages · Arcade' : `questions · ${recipe.mode === "exam" ? "Exam" : "Practice"}`} · Levels ${recipe.levelMin}–${recipe.levelMax}`;
 const privateURL = (id, key) =>
   `${location.origin}/manage/${id}#key=${encodeURIComponent(key)}`;
 const studentURL = (id) => `${location.origin}/a/${id}`;
@@ -182,7 +183,7 @@ async function api(path, { method = "GET", body, key } = {}) {
     const detail =
       typeof data.detail === "string"
         ? data.detail
-        : "Check the assignment settings and try again.";
+        : "Check the exercise settings and try again.";
     const error = new Error(detail);
     error.status = response.status;
     throw error;
@@ -190,12 +191,12 @@ async function api(path, { method = "GET", body, key } = {}) {
   return data;
 }
 function errorPage(error) {
-  root.innerHTML = `<section class="error-page"><p class="eyebrow">See Maths assignments</p><h1>${error.status === 410 ? "Assignment expired" : error.status === 403 ? "Private link needed" : "Could not open this page"}</h1><p class="muted">${escape(error.message)}</p><div class="actions"><a class="primary" href="/assignments">Assignments</a><button class="secondary" id="retry">Try again</button></div></section>`;
+  root.innerHTML = `<section class="error-page"><p class="eyebrow">See Maths exercises</p><h1>${error.status === 410 ? "Exercise expired" : error.status === 404 ? "Exercise unavailable" : error.status === 403 ? "Private link needed" : "Could not open this page"}</h1><p class="muted">${escape(error.message)}</p><div class="actions"><a class="primary" href="/exercises">Exercises</a><button class="secondary" id="retry">Try again</button></div></section>`;
   document.querySelector("#retry").onclick = () => location.reload();
 }
 function listItem(item) {
   const createdAt=item.createdAt ?? item.expiresAt-(config.lifetimeDays || 7)*86400;
-  return `<article class="assignment-item"><a class="assignment-number reference" href="/manage/${item.id}" aria-label="View assignment ${ref(item.reference)}">${ref(item.reference)}</a><div class="assignment-topic"><h3 title="${escape(topicLabel(item.recipe.topic))}"><a href="/manage/${item.id}">${escape(topicLabel(item.recipe.topic))}</a></h3><span class="student-count" role="img" aria-label="${item.studentCount || 0} student IDs created" title="${item.studentCount || 0} student IDs created">${item.studentCount || 0}</span></div><span>${item.recipe.count} ${item.recipe.player==='arcade' ? 'stages' : item.recipe.count === 1 ? 'question' : 'questions'}</span><span class="assignment-dates">${assignmentDateLabel(createdAt,item.expiresAt)}</span><button class="get-assignment-link" type="button" data-assignment-id="${item.id}" aria-label="Copy link for assignment ${ref(item.reference)}"><span>Copy link</span><span class="link-copied-tick" aria-hidden="true">✓</span><span class="link-copy-status visually-hidden" role="status" aria-live="polite"></span></button></article>`;
+  return `<article class="assignment-item"><a class="assignment-number reference" href="/manage/${item.id}" aria-label="View exercise ${ref(item.reference)}">${ref(item.reference)}</a><div class="assignment-topic"><span class="student-count" role="img" aria-label="${item.studentCount ?? 0} student IDs created" title="${item.studentCount ?? 0} student IDs created">${item.studentCount ?? 0}</span><h3 title="${escape(topicLabel(item.recipe.topic))}"><a href="/manage/${item.id}">${escape(topicLabel(item.recipe.topic))}</a></h3></div><span>${item.recipe.count} ${item.recipe.player==='arcade' ? 'stages' : item.recipe.count === 1 ? 'question' : 'questions'}</span><span class="assignment-dates">${assignmentDateLabel(createdAt,item.expiresAt)}</span><button class="get-assignment-link" type="button" data-assignment-id="${item.id}" aria-label="Copy link for exercise ${ref(item.reference)}"><span>Copy link</span><span class="link-copy-icon" aria-hidden="true"><svg class="link-copy-symbol" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h4"/></svg><svg class="link-copied-tick" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span class="link-copy-status visually-hidden" role="status" aria-live="polite"></span></button></article>`;
 }
 function searchTerm(value) {
   let term=value.trim();
@@ -213,22 +214,22 @@ async function refreshLegacyReferences() {
       for(const item of data.assignments)current.set(item.id,item);
     }
     write(mineKey,saved.filter(a=>current.has(a.id)).map(a=>({...a,...current.get(a.id)})));
-  } catch {toast('Could not update saved assignment numbers. Reopen the page to try again.');}
+  } catch {toast('Could not update saved exercise numbers. Reopen the page to try again.');}
 }
 async function home() {
   await refreshLegacyReferences();
   const saved=savedAssignments();
   let mine=new URLSearchParams(location.search).get('view')==='mine' && saved.length>0;
-  root.innerHTML=`<h1 class="visually-hidden">Assignments</h1>
-    <div class="assignment-toolbar"><button type="button" class="reload-assignments" id="reload-assignments" aria-label="Reload assignments" title="Reload assignments"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4v6h-6 M20 10a8 8 0 1 0-2.3 8"/></svg></button><form id="search-form" class="assignment-search" role="search"><input class="search-input" id="query" type="search" maxlength="2048" placeholder="Assignment link, ID, reference or topic" aria-label="Search assignments"><button type="submit">Search</button></form>
-    <div class="assignment-filters">${saved.length ? `<button type="button" class="mine-filter" id="mine-only" aria-pressed="${mine}"><span class="filter-tick" aria-hidden="true">✓</span>My Assignments</button>` : ''}</div></div>
-    <section class="assignment-results"><h2 id="list-heading" class="visually-hidden">All Assignments</h2><p id="list-note" class="visually-hidden" hidden>Assignments created in this browser.</p><div class="assignment-list" id="results"></div><div class="actions" id="pagination"></div></section>`;
+  root.innerHTML=`<h1 class="visually-hidden">Exercises</h1>
+    <div class="assignment-toolbar"><button type="button" class="reload-assignments" id="reload-assignments" aria-label="Reload exercises" title="Reload exercises">${reloadIcon}</button><form id="search-form" class="assignment-search" role="search"><input class="search-input" id="query" type="search" maxlength="2048" placeholder="Exercise link, ID, reference or topic" aria-label="Search exercises"><button type="submit">Search</button></form>
+    <div class="assignment-filters">${saved.length ? `<button type="button" class="mine-filter" id="mine-only" aria-pressed="${mine}"><span class="filter-tick" aria-hidden="true">✓</span>My Exercises</button>` : ''}</div></div>
+    <section class="assignment-results"><h2 id="list-heading" class="visually-hidden">All Exercises</h2><p id="list-note" class="visually-hidden" hidden>Exercises created in this browser.</p><div class="assignment-list" id="results"></div><div class="actions" id="pagination"></div></section>`;
   let offset=0, requestVersion=0;
   const input=document.querySelector('#query');
   async function search() {
     const version=++requestVersion;
     const target=document.querySelector('#results');
-    document.querySelector('#list-heading').textContent=mine?'My Assignments':'All Assignments';
+    document.querySelector('#list-heading').textContent=mine?'My Exercises':'All Exercises';
     document.querySelector('#list-note').hidden=!mine;
     let rows=[];
     try {
@@ -245,20 +246,20 @@ async function home() {
         }
       } else rows=(await api(`/api/assignments?q=${encodeURIComponent(searchTerm(input.value))}&offset=${offset}`)).assignments;
       if(version!==requestVersion) return;
-      target.innerHTML=rows.length?rows.map(a=>listItem(a)).join(''):'<p class="muted">No active assignments found.</p>';
+      target.innerHTML=rows.length?rows.map(a=>listItem(a)).join(''):'<p class="muted">No active exercises found.</p>';
       target.querySelectorAll('.get-assignment-link').forEach(button=>{button.onclick=async()=>{
         button.disabled=true;
         try {const item=rows.find(a=>a.id===button.dataset.assignmentId);if(await copy(studentAssignmentURL(item),null)){button.classList.add('is-copied');button.querySelector('.link-copy-status').textContent='Link copied';}}
         finally {button.disabled=false;}
       };});
-      document.querySelector('#pagination').innerHTML=`${offset?'<button class="secondary" id="previous-page">Previous</button>':''}${rows.length===25?'<button class="secondary" id="next-page">More assignments</button>':''}`;
+      document.querySelector('#pagination').innerHTML=`${offset?'<button class="secondary" id="previous-page">Previous</button>':''}${rows.length===25?'<button class="secondary" id="next-page">More exercises</button>':''}`;
       document.querySelector('#previous-page')?.addEventListener('click',()=>{offset-=25;search();});
       document.querySelector('#next-page')?.addEventListener('click',()=>{offset+=25;search();});
     } catch(error){if(version!==requestVersion)return;target.innerHTML='<p class="muted">Could not load assignments. Use Search to try again.</p>';toast(error.message);}
   }
   document.querySelector('#reload-assignments').onclick=async e=>{const button=e.currentTarget;button.disabled=true;try{await search();}finally{button.disabled=false;}};
   document.querySelector('#search-form').onsubmit=e=>{e.preventDefault();offset=0;search();};
-  document.querySelector('#mine-only')?.addEventListener('click',e=>{mine=!mine;e.currentTarget.setAttribute('aria-pressed',String(mine));offset=0;history.replaceState(null,'',mine?'/assignments?view=mine':'/assignments');search();});
+  document.querySelector('#mine-only')?.addEventListener('click',e=>{mine=!mine;e.currentTarget.setAttribute('aria-pressed',String(mine));offset=0;history.replaceState(null,'',mine?'/exercises?view=mine':'/exercises');search();});
   await search();
 }
 
@@ -268,24 +269,18 @@ async function dashboard(id) {
     key = fragment.get("key") || stored?.key;
   const progressPath=`/api/assignments/${id}/manage`;
   const assignment = await api(progressPath, { key });
-  const newlyCreated = fragment.get("new") === "1";
   if (key && remember(assignment, key))
     history.replaceState(null, "", location.pathname);
   else if(key)
     toast("Browser storage is unavailable. Save your private management link.");
   history.replaceState(null,"",location.pathname);
-  root.innerHTML = `<a class="back-link" href="/assignments">Assignments</a><div class="dashboard-heading"><p class="eyebrow">Assignment <span class="reference">${ref(assignment.reference)}</span></p><h1>${topicLabel(assignment.recipe.topic)}</h1><div class="heading-meta"><span>${assignment.recipe.count} questions</span><span>${assignment.recipe.mode === "exam" ? "Exam" : "Practice"}</span><span>Levels ${assignment.recipe.levelMin}–${assignment.recipe.levelMax}</span><span>Expires ${expiryDate(assignment.expiresAt)}</span></div></div>
-  ${newlyCreated ? '<p class="notice" id="created-notice">Your assignment is ready. Share the student link, and save your private management link to return from another browser.</p><div class="divider"></div>' : ""}
-  <section class="share-panel"><div><h2>Share this assignment</h2><p>Students tell you their number. Their names stay with you.</p></div><div class="actions"><button class="primary" id="copy-student">Copy student link</button><button class="secondary" id="copy-management">Copy management link</button><button class="secondary" id="save-link" aria-label="Download private management link">Save link</button></div></section>
-  <section class="panel students-panel"><div class="students-toolbar"><h2>Student progress</h2><div class="actions"><span class="muted" id="last-sync">Updating…</span><button class="quiet" id="refresh">Refresh</button></div></div><div id="students"></div></section>
-  <div class="dashboard-footer"><p>Progress and assignments expire together after 7 days.</p><div class="actions"><button class="secondary" id="export-results">Download results</button><button class="secondary" id="close-assignment">Close joining</button><button class="danger" id="delete-assignment">Delete</button></div></div><p class="error-text" id="dashboard-error" role="alert"></p>`;
+  root.innerHTML = `<div class="dashboard-heading"><p class="assignment-reference-tag" aria-label="Exercise ${ref(assignment.reference)}">${ref(assignment.reference)}</p><div class="dashboard-topic"><h1>${escape(topicLabel(assignment.recipe.topic))}</h1><button class="secondary" id="copy-student">Copy link</button></div><div class="heading-meta"><span>${assignment.recipe.count} ${assignment.recipe.player === 'arcade' ? 'stages' : 'questions'}</span><span>${assignment.recipe.mode === "exam" ? "Exam" : "Practice"}</span><span>Levels ${assignment.recipe.levelMin}–${assignment.recipe.levelMax}</span><span>Expires ${expiryDate(assignment.expiresAt)}</span><button class="quiet refresh-progress" id="refresh" aria-label="Refresh progress" title="Refresh progress">${reloadIcon}</button></div></div>
+  <section class="panel students-panel" aria-label="Student progress"><div id="students"></div></section>
+  <div class="dashboard-footer"><div class="actions"><button class="secondary" id="export-results">Download results</button><button class="danger" id="delete-assignment">Delete</button></div></div><p class="error-text" id="dashboard-error" role="alert"></p>`;
   let latest = assignment,
     busy = false;
   function render(data) {
     latest = data;
-    document.querySelector("#close-assignment").textContent = data.closed
-      ? "Reopen joining"
-      : "Close joining";
     document.querySelector("#students").innerHTML = data.students.length
       ? `<div class="student-progress-list">${data.students.map(s => {
           const minutes = Math.floor((s.activeSeconds || 0) / 60);
@@ -297,13 +292,13 @@ async function dashboard(id) {
             return `<span class="progress-dot ${state}" role="img" aria-label="Question ${index+1}: ${label}" title="Question ${index+1}: ${label}"></span>`;
           }).join('')}</div><span class="student-time" aria-label="Time spent">${escape(duration)}</span></div>`;
         }).join('')}</div>`
-      : `<div class="empty"><div class="empty-mark" aria-hidden="true">÷</div><h3>No students have started yet.</h3><p>${data.closed ? "Joining is closed. Reopen it to let students start." : "Share the student link. Progress will appear here as students work."}</p></div>`;
-    document.querySelector("#last-sync").textContent = "Updated just now";
+      : `<div class="empty"><div class="empty-mark" aria-hidden="true">÷</div><h3>No students have started yet.</h3><p>${data.closed ? "This exercise is closed to new students." : "Share the student link. Progress will appear here as students work."}</p></div>`;
     document.querySelector("#dashboard-error").textContent = "";
   }
   async function refresh() {
     if (busy || document.hidden) return;
     busy = true;
+    const button = document.querySelector("#refresh"); button.disabled = true;
     try {
       render(await api(progressPath, { key }));
     } catch (e) {
@@ -311,25 +306,17 @@ async function dashboard(id) {
         errorPage(e);
         return;
       }
-      document.querySelector("#last-sync").textContent = "Could not refresh";
       document.querySelector("#dashboard-error").textContent =
         "Showing the last saved progress. " + e.message;
     } finally {
-      busy = false;
+      busy = false; button.disabled = false;
     }
   }
   render(assignment);
-  if(!key) for(const selector of ['#copy-management','#save-link','#close-assignment','#delete-assignment']) document.querySelector(selector).hidden=true;
+  if(!key) document.querySelector("#delete-assignment").hidden=true;
 
   document.querySelector("#refresh").onclick = refresh;
   document.querySelector("#copy-student").onclick = () => copy(studentAssignmentURL(assignment));
-  document.querySelector("#copy-management").onclick = () =>
-    copy(privateURL(id, key), "Private management link copied");
-  document.querySelector("#save-link").onclick = () =>
-    download(
-      `seemaths-${ref(assignment.reference)}-private-link.txt`,
-      `See Maths ${ref(assignment.reference)}\nPrivate management link — keep this to yourself.\n${privateURL(id, key)}\nExpires ${expiryDate(assignment.expiresAt)}\n`,
-    );
   document.querySelector("#export-results").onclick = () => {
     const rows = [
       [
@@ -355,28 +342,11 @@ async function dashboard(id) {
       "text/csv",
     );
   };
-  document.querySelector("#close-assignment").onclick = async () => {
-    try {
-      await api(`/api/assignments/${id}/manage`, {
-        method: "PATCH",
-        key,
-        body: { closed: !latest.closed },
-      });
-      await refresh();
-      toast(
-        latest.closed
-          ? "Closed to new students. Existing students can continue."
-          : "Joining reopened",
-      );
-    } catch (e) {
-      toast(e.message);
-    }
-  };
   document.querySelector("#delete-assignment").onclick = async () => {
     if (
       !(await confirmAction(
         "Delete this assignment?",
-        "This permanently deletes the assignment and every student’s stored progress. Student links will stop working.",
+        "This permanently deletes the exercise and every student’s stored progress. Student links will stop working.",
       ))
     )
       return;
@@ -386,7 +356,7 @@ async function dashboard(id) {
         mineKey,
         savedAssignments().filter((a) => a.id !== id),
       );
-      location.assign("/assignments");
+      location.assign("/exercises");
     } catch (e) {
       toast(e.message);
     }
@@ -399,7 +369,7 @@ try {
   config = await api("/api/config");
   const parts = location.pathname.split("/").filter(Boolean);
   if (parts[0] === "manage" && parts[1]) await dashboard(parts[1]);
-  else if (parts[0] === "a" && parts[1]) location.replace(studentURL(parts[1]));
+  else if (parts[0] === "a" && parts[1]) location.replace(studentAssignmentURL(await api(`/api/assignments/${parts[1]}`)));
   else await home();
 } catch (error) {
   errorPage(error);

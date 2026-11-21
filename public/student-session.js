@@ -5,7 +5,7 @@ import { questionOutcomes, mergeQuestionOutcomes } from './progress-outcomes.js?
 const parameters = new URLSearchParams(location.search);
 const prefix = 'seemaths.assignments.student.v1.';
 const uuid = /^[a-f0-9-]{36}$/i;
-const displayNumber = n => String(n).padStart(4, '0');
+const displayNumber = n => String(n).padStart(2, '0');
 let badge, messageTimer, pendingMessage;
 function notice(text) {
   let message = document.querySelector('.seemaths-student-message');
@@ -42,11 +42,11 @@ function installBadge(session) {
   if (badge) badge.remove();
   badge = document.createElement('button'); badge.type = 'button'; badge.className = 'seemaths-student-id';
   const label = document.createElement('span'); label.textContent = 'Student Id';
-  const number = document.createElement('strong'); number.textContent = session?.number ? displayNumber(session.number) : '—';
-  badge.append(label, number); badge.title = session?.number ? 'Copy Student Id' : 'Student Id is unavailable';
-  badge.setAttribute('aria-label', session?.number ? `Student Id ${displayNumber(session.number)}. Click to copy.` : 'Student Id unavailable');
+  const number = document.createElement('strong'); number.textContent = session?.number != null ? displayNumber(session.number) : '—';
+  badge.append(label, number); badge.title = session?.number != null ? 'Copy Student Id' : 'Student Id is unavailable';
+  badge.setAttribute('aria-label', session?.number != null ? `Student Id ${displayNumber(session.number)}. Click to copy.` : 'Student Id unavailable');
   badge.onclick = async () => {
-    if (!session?.number) { notice(pendingMessage || 'Connect to the internet to get your Student Id.'); return; }
+    if (session?.number == null) { notice(pendingMessage || 'Connect to the internet to get your Student Id.'); return; }
     const text = displayNumber(session.number);
     try { await navigator.clipboard.writeText(text); notice(`Student Id ${text} copied`); }
     catch {
@@ -54,24 +54,37 @@ function installBadge(session) {
       const copied = document.execCommand('copy'); field.remove(); notice(copied ? `Student Id ${text} copied` : `Your Student Id is ${text}`);
     }
   };
-  function mount() { const header = document.querySelector('.paper-heading-with-layout'); if (header && !header.contains(badge)) header.append(badge); }
+  function mount() { const header = document.querySelector('#game > .topbar, .paper-heading-with-layout'); if (header && !header.contains(badge)) header.append(badge); }
   mount(); const observer = new MutationObserver(mount); observer.observe(document.body, {childList:true,subtree:true});
   window.addEventListener('pagehide', () => observer.disconnect(), {once:true});
 }
 function recipeFromURL() {
-  return {topic:parameters.get('topic') || 'random', mode:parameters.get('mode') || 'practice', count:Number(parameters.get('count') || 10),levelMin:Number(parameters.get('levelMin') || 1),levelMax:Number(parameters.get('levelMax') || 5),minutes:Number(parameters.get('minutes') || 30), ...(parameters.has('blueprint') ? {blueprint:parameters.get('blueprint')} : {})};
+  return {topic:parameters.get('topic') || 'random', mode:parameters.get('mode') || 'practice', player:parameters.get('player') || 'standard', count:Number(parameters.get('count') || 10),levelMin:Number(parameters.get('levelMin') || 1),levelMax:Number(parameters.get('levelMax') || 5),minutes:Number(parameters.get('minutes') || 30), ...(parameters.has('blueprint') ? {blueprint:parameters.get('blueprint')} : {})};
 }
 export async function prepareStudent() {
-  if (!['practice','exam'].includes(parameters.get('mode') || 'practice')) return null;
+  const reporting = ['practice','exam'].includes(parameters.get('mode') || 'practice');
+  if (!reporting && !parameters.has('assignment')) return null;
   let session, assignmentId = parameters.get('assignment');
   try {
+    session = assignmentId ? read(assignmentId) : null;
+    if (session?.expiresAt && session.expiresAt <= Date.now()/1000) {
+      const error = new Error('This exercise has expired. Ask for a new exercise link.');
+      error.status = 410; throw error;
+    }
+    const recipe = recipeFromURL();
+    if (!assignmentId && recipe.player === 'arcade') {
+      const {selectStages} = await import('/assignment-arcade/campaign.js');
+      recipe.stages = await selectStages(recipe);
+    }
     const assignment = assignmentId && uuid.test(assignmentId)
       ? await request(`/api/assignments/${assignmentId}`)
-      : await request('/api/assignments/resolve', {method:'POST',body:recipeFromURL()});
+      : await request('/api/assignments/resolve', {method:'POST',body:recipe});
     assignmentId = assignment.id;
-    // Explicit assignment settings are authoritative; students cannot alter a shared recipe.
+    if (!reporting) return null;
+    // Explicit exercise settings are authoritative; students cannot alter a shared recipe.
     const url = new URL(location.href);
-    for (const [key, value] of Object.entries(assignment.recipe)) if (value != null) url.searchParams.set(key, value);
+    for (const [key, value] of Object.entries(assignment.recipe)) if (value != null && key !== 'stages') url.searchParams.set(key, value);
+    url.searchParams.set('player', assignment.recipe.player || 'standard');
     url.searchParams.set('assignment', assignmentId);
     url.searchParams.delete('teacher');
     session = read(assignmentId);
@@ -87,7 +100,7 @@ export async function prepareStudent() {
     session={...session,assignmentId,key:identity.key};
     if(!save(session)) throw new Error('Enable browser storage to keep your Student Id.');
     const joined = await request(`/api/assignments/${assignmentId}/join`, {method:'POST',body:{credential:session.key}});
-    session = {...session,...joined,assignmentId,expiresAt:assignment.expiresAt};
+    session = {...session,...joined,assignmentId,recipe:assignment.recipe,expiresAt:assignment.expiresAt};
     // Reserve one local attempt before either tab starts generating questions.
     session.sharedAttemptId=joined.attemptId || identity.attemptId;
     await bindStudentAttempt(assignmentId,session.key,session.sharedAttemptId);
@@ -99,10 +112,22 @@ export async function prepareStudent() {
     return session;
   } catch (error) {
     session = assignmentId ? read(assignmentId) : null;
+    // An authoritative expiry/deletion must not become untracked local play.
+    // Cached, unexpired sessions still work through temporary network outages.
+    if (assignmentId && [404,410,409].includes(error.status)) throw error;
+    if (session?.expiresAt && session.expiresAt <= Date.now()/1000) {
+      const expired = new Error('This exercise has expired. Ask for a new exercise link.');
+      expired.status = 410; throw expired;
+    }
+    if (assignmentId && !session?.expiresAt) {
+      const unavailable = new Error('Connect to the internet to check this exercise, then try again.');
+      unavailable.status = 503; throw unavailable;
+    }
+    if (!reporting) return null;
     pendingMessage = error.message;
     installBadge(session);
     // Keep previously allocated numbers visible offline; do not invent numbers.
-    if (!session?.number) setTimeout(() => notice(error.message), 1200);
+    if (session?.number == null) setTimeout(() => notice(error.message), 1200);
     return session?.id ? session : null;
   }
 }
@@ -149,15 +174,15 @@ export function watchProgress(session) {
     accrue();
     if (stopped) return;
     if (busy) { rerun=true; return; }
-    if (Date.now()/1000 >= session.expiresAt) { stopped=true;localStorage.removeItem(prefix+session.assignmentId);sessionStorage.removeItem(prefix+session.assignmentId);notice('This assignment has expired.');return; }
+    if (Date.now()/1000 >= session.expiresAt) { stopped=true;localStorage.removeItem(prefix+session.assignmentId);sessionStorage.removeItem(prefix+session.assignmentId);notice('This exercise has expired.');return; }
     busy=true;
     try {
-      const attemptId=new URLSearchParams(location.search).get('attempt');
+      const attemptId=new URLSearchParams(location.search).get('attempt') || session.sharedAttemptId;
       const attempt=attemptId && await getAttempt(attemptId);
       if(attempt) {
         lastAttempt=attempt;
-        let answers=mergeQuestionOutcomes(read(session.assignmentId)?.answers,questionOutcomes(attempt,tracking));
-        const completed=Boolean(attempt.result) || (attempt.recipe.mode==='practice' && answers.length===attempt.recipe.count && answers.every(a => a.correct===true || a.skipped));
+        let answers=mergeQuestionOutcomes(read(session.assignmentId)?.answers,questionOutcomes(attempt,{...tracking,...attempt.tracking}));
+        const completed=Boolean(attempt.result) || (attempt.recipe.player!=='arcade' && attempt.recipe.mode==='practice' && answers.length===attempt.recipe.count && answers.every(a => a.correct===true || a.skipped));
         const snapshot={answers,completed,attemptId:attempt.id,activeSeconds:Math.min(604800,Math.floor(activeSeconds))};
         const next=JSON.stringify({answers,completed,attemptId:attempt.id});
         if((next!==signature || forceTime) && !session.completedAt) {

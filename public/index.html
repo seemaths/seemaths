@@ -41,14 +41,11 @@
         <span>See Maths</span>
       </a>
       <nav class="player-links" aria-label="Maths players">
-        <a class="player-link player-link-naplan" href="https://naplan.seemaths.org/" data-local-player="/naplan-player/">
+        <a class="player-link player-link-naplan" href="/naplan-player/" data-local-player="/naplan-player/">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 9 9-5 9 5-9 5Z M6 11v6c4 3 8 3 12 0v-6 M21 9v8"/></svg><span>NAPLAN</span>
         </a>
-        <a class="player-link player-link-psat" href="https://psat.seemaths.org/" data-local-player="/psat-player/">
+        <a class="player-link player-link-psat" href="/psat-player/" data-local-player="/psat-player/">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v17H5Z M9 4V2h6v2 M9 10l2 2 4-4 M9 16h6"/></svg><span>PSAT</span>
-        </a>
-        <a class="player-link player-link-arcade" href="https://arcade.seemaths.org/" data-local-player="/arcade-player/">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10c3 0 5 11 3 12-2 1-4-3-5-3H9c-1 0-3 4-5 3C2 18 4 7 7 7Z M7 10v5 M4.5 12.5h5 M15 11h.01 M18 14h.01"/></svg><span>Arcade</span>
         </a>
       </nav>
     </header>
@@ -96,6 +93,11 @@
             <div class="range-labels" aria-hidden="true"><span>1</span><span>5</span></div>
           </fieldset>
         </div>
+        <fieldset class="player-setting" id="player-setting">
+          <legend class="visually-hidden">Player</legend>
+          <label><input type="radio" name="player" value="standard" checked><span>Standard</span></label>
+          <label><input type="radio" name="player" value="arcade"><span>Arcade</span></label>
+        </fieldset>
         <fieldset class="duration-setting" id="duration-setting" hidden>
           <legend>Time</legend>
           <div class="duration-row">
@@ -116,7 +118,7 @@
         <p id="activity-summary" class="visually-hidden" aria-live="polite"></p>
         <div class="actions">
           <button class="primary-button" id="open-activity" type="submit"><span id="open-activity-label">Self Study</span></button>
-          <button class="copy-button" id="copy-link" type="button"><span>Create Assignment</span><span id="copy-feedback" class="copy-feedback" role="status" aria-live="polite" hidden>Copied</span></button>
+          <button class="copy-button" id="copy-link" type="button"><span>Create Exercise</span><span id="copy-feedback" class="copy-feedback" role="status" aria-live="polite" hidden>Copied</span></button>
         </div>
         <label class="visually-hidden" for="activity-link">Shareable activity link</label>
         <input id="activity-link" class="activity-link" type="text" readonly hidden spellcheck="false" aria-describedby="share-note">
