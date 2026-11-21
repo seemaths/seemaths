@@ -152,5 +152,5 @@ body{position:relative;min-height:100svh}
 .activity-controls .actions .primary-button:hover{background:#d9eae6}
 
 .activity-controls{position:relative}
-.close-activity-panel{position:absolute;top:9px;right:9px;display:grid;place-items:center;width:28px;height:28px;padding:5px;border:0;border-radius:50%;background:#e6f1ef;color:var(--teal-dark)}
+.close-activity-panel{position:absolute;z-index:5;top:9px;right:9px;display:grid;place-items:center;width:28px;height:28px;padding:5px;border:0;border-radius:50%;background:#e6f1ef;color:var(--teal-dark)}
 .close-activity-panel:hover{background:#d9eae6}.close-activity-panel svg{display:block;width:18px;height:18px}
