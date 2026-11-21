@@ -161,8 +161,9 @@
     sharedTitle = assignment ? `See Maths · Exercise ${assignment.reference}` : '';
     $('exercise-share').hidden = !sharedURL;
     $('share-feedback').textContent = '';
-    $('share-copy').textContent = 'Copy';
-    document.querySelector('.exercise-share-more').open = false;
+    $('share-copy').classList.remove('is-copied');
+    $('share-copy').setAttribute('aria-label', 'Copy link');
+    $('share-copy').title = 'Copy link';
     if (!sharedURL) return;
     const display = new URL(sharedURL);
     $('exercise-share-url').href = sharedURL;
@@ -393,7 +394,9 @@
     try {
       if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
       await navigator.clipboard.writeText(sharedURL);
-      $('share-copy').textContent = 'Copied'; $('share-feedback').textContent = 'Link copied';
+      $('share-copy').classList.add('is-copied');
+      $('share-copy').setAttribute('aria-label', 'Link copied'); $('share-copy').title = 'Link copied';
+      $('share-feedback').textContent = 'Link copied';
     } catch {
       $('activity-link').value = sharedURL; $('activity-link').hidden = false;
       $('activity-link').focus(); $('activity-link').select(); $('status').textContent = 'Copy the selected link.';
