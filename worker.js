@@ -40,7 +40,7 @@ export default {
     const mathspaceHost = incoming.hostname === MATHSPACE_HOST;
     const arcadeHost = incoming.hostname === ARCADE_HOST;
     const playerHost = incoming.hostname === PLAYER_HOST;
-    if (!mathspaceHost && incoming.pathname === '/favicon.ico') incoming.pathname = '/favicon.svg';
+    if (!mathspaceHost && incoming.pathname === '/favicon.ico') {incoming.pathname = '/favicon.svg';incoming.searchParams.set('v','division');}
     if ((arcadeHost || playerHost) && (publicPath === '/' || /^\/[0-9]{4}\/?$/.test(publicPath))) {
       const shell = new URL('/exercise-player', incoming);
       const response = await env.ASSETS.fetch(new Request(shell, request));

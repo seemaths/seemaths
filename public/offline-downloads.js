@@ -132,7 +132,8 @@ export function downloadActivity({readRecipe, planActivity}) {
         ids = [...new Set(plan.slots.map(slot => slot.quode))]; total = ids.length;
         roots = [location.href, '/play/', '/api/activities/js-catalog',
           '/offline-downloads.js', '/runtime/questionnaire.js',
-          ...performance.getEntriesByType('resource').map(entry => entry.name)];
+          ...performance.getEntriesByType('resource').map(entry => entry.name)]
+          .map(value => new URL(value, location.href).pathname === '/favicon.ico' ? '/favicon.svg?v=division' : value);
       }
       update();
       // Shared rendering, styles and the saved-attempt loader must also be ready.

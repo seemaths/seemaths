@@ -1,5 +1,5 @@
 import { prepareStudent, watchProgress } from './student-session.js?v=16';
-import { downloadActivity } from './offline-downloads.js?v=3';
+import { downloadActivity } from './offline-downloads.js?v=4';
 
 // Resolve the participant before the player creates/restores its browser attempt.
 // A temporary reporting outage must never stop the child opening their maths.

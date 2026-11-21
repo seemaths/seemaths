@@ -24,7 +24,19 @@ body:has(.seemaths-opening) .seemaths-activity-bar{display:none!important}
 @media(max-width:650px){#app .paper-heading-with-layout:has(.seemaths-student-id){justify-content:space-between}#app .paper-heading-with-layout:has(.seemaths-student-id) .paper-brand{display:flex}#app .paper-heading-with-layout:has(.seemaths-student-id) .paper-title-detail{display:none}}
 
 @media screen {
-  #app.questionnaire{--psat-primary:#173b43}
-  #app .paper-heading-with-layout,#app .paper-footer{background:#173b43;color:#fff;border-color:#ffffff24}
+  #app.questionnaire{--psat-primary:#1c2942}
+  #app .paper-heading-with-layout,#app .paper-footer{background:#1c2942;color:#f3f6fc;border-color:#ffffff24}
   #app .paper-heading-with-layout .paper-home-link{color:inherit}
+}
+
+@media screen {
+  #app .paper-footer .paper-dot{background:#2b3b56;border-color:#56647c;color:#e4eaf4;box-shadow:none}
+  #app .paper-footer .paper-dot.answered{background:#284c49;border-color:#73b6a4;color:#b9edda}
+  #app .paper-footer .paper-dot[aria-current=step]{background:#f2c879;border-color:#f2c879;color:#1c2942;box-shadow:0 0 0 2px #f2c87933}
+  #app .paper-footer .paper-dot:hover:not(:disabled){background:#3a4e6b;box-shadow:0 0 0 2px #91a6c333;transform:none}
+  #app .paper-footer .paper-dot[aria-current=step]:hover{background:#f2c879}
+  #app .paper-footer .paper-button{background:#2b3b56;color:#e4eaf4;border:1px solid #56647c}
+  #app .paper-footer .paper-button:disabled{background:transparent;color:#8090a9;border-color:transparent;opacity:.6}
+  #app .paper-footer button:focus-visible{outline-color:#f2c879}
+  #app .paper-footer .paper-dots{scrollbar-color:#56647c transparent}
 }
