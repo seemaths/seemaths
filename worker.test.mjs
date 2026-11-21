@@ -269,3 +269,10 @@ test('assignment lookup reaches the portal and local player saves emit an event'
     assert.equal(response.headers.get('Cache-Control'),'no-store');
   });
 });
+
+test('player favicon fallback serves the See Maths SVG for offline downloads',async()=>{
+  const {env,calls}=assets();env.STATIC_QUODES='true';
+  const response=await worker.fetch(new Request('https://player.seemaths.org/favicon.ico'),env);
+  assert.equal(response.status,200);
+  assert.equal(new URL(calls[0].url).pathname,'/favicon.svg');
+});

@@ -22,3 +22,29 @@ body:has(.seemaths-opening) .seemaths-activity-bar{display:none!important}
 @media print{.seemaths-downloads{display:none!important}}
 #app .paper-heading-with-layout .seemaths-student-id{margin-left:auto}
 @media(max-width:650px){#app .paper-heading-with-layout:has(.seemaths-student-id){justify-content:space-between}#app .paper-heading-with-layout:has(.seemaths-student-id) .paper-brand{display:flex}#app .paper-heading-with-layout:has(.seemaths-student-id) .paper-title-detail{display:none}}
+
+@media screen {
+  #app.questionnaire{--psat-primary:var(--player-strip,#1c2942)}
+  #app .paper-heading-with-layout,#app .paper-footer{background:var(--player-strip,#1c2942);color:#f3f6fc;border-color:#ffffff24}
+  #app .paper-heading-with-layout .paper-home-link{color:inherit}
+}
+
+@media screen {
+  #app .paper-footer .paper-dot{background:var(--player-button,#2b3b56);border-color:var(--player-border,#56647c);color:#e4eaf4;box-shadow:none}
+  #app .paper-footer .paper-dot.answered{background:#284c49;border-color:#73b6a4;color:#b9edda}
+  #app .paper-footer .paper-dot[aria-current=step]{background:var(--player-current,#f2c879);border-color:var(--player-current,#f2c879);color:var(--player-strip,#1c2942);box-shadow:0 0 0 2px #f2c87933}
+  #app .paper-footer .paper-dot:hover:not(:disabled){background:var(--player-hover,#3a4e6b);box-shadow:0 0 0 2px #91a6c333;transform:none}
+  #app .paper-footer .paper-dot[aria-current=step]:hover{background:var(--player-current,#f2c879)}
+  #app .paper-footer .paper-button{background:var(--player-button,#2b3b56);color:#e4eaf4;border:1px solid var(--player-border,#56647c)}
+  #app .paper-footer .paper-button:disabled{background:transparent;color:#8090a9;border-color:transparent;opacity:.6}
+  #app .paper-footer button:focus-visible{outline-color:var(--player-current,#f2c879)}
+  #app .paper-footer .paper-dots{scrollbar-color:var(--player-border,#56647c) transparent}
+}
+
+@font-face{font-family:SeeMathsBrand;src:url('/nunito-brand.ttf') format('truetype');font-display:swap}
+@media screen {
+  #app .paper-heading-with-layout .paper-home-link{display:inline-flex;align-items:center;gap:10px;text-decoration:none}
+  #app .paper-heading-with-layout .paper-home-link .paper-brand-icon{width:44px;height:36px;border-radius:0;object-fit:contain}
+  #app .seemaths-wordmark{font:900 27px/1.2 SeeMathsBrand,Nunito,system-ui,sans-serif;letter-spacing:-.025em;color:inherit}
+}
+@media(max-width:650px){#app .seemaths-wordmark{font-size:23px}#app .paper-heading-with-layout .paper-home-link .paper-brand-icon{width:36px;height:30px}}

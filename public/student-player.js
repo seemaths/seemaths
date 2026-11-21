@@ -1,9 +1,11 @@
+import {applyPlayerTheme} from './player-theme.js';
 import { prepareStudent, watchProgress } from './student-session.js?v=16';
-import { downloadActivity } from './offline-downloads.js?v=2';
+import { downloadActivity } from './offline-downloads.js?v=4';
 
 // Resolve the participant before the player creates/restores its browser attempt.
 // A temporary reporting outage must never stop the child opening their maths.
 async function start() {
+applyPlayerTheme(document.documentElement, new URLSearchParams(globalThis.seemathsExerciseSearch || location.search).get('assignment') || location.pathname);
 let student;
 try { student = await prepareStudent(); }
 catch (error) {
