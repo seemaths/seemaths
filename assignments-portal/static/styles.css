@@ -1024,3 +1024,23 @@ dialog .actions {
 .assignment-item>span:not(.pill){color:var(--muted)}
 
 .mine-filter{display:inline-flex;align-items:center;gap:8px;font-size:.875rem;font-weight:650;white-space:nowrap;cursor:pointer}.mine-filter input{width:18px;height:18px;accent-color:var(--teal)}
+
+/* Match the homepage brand and keep assignment discovery focused on search. */
+@font-face{font-family:"See Maths Nunito";font-style:normal;font-weight:200 1000;font-display:swap;src:url("/nunito-brand.ttf?v=1000") format("truetype")}
+.masthead .brand{position:relative;display:inline-flex;align-items:flex-start;padding:16px 0 0 12px;gap:0;font-size:33px;letter-spacing:-.025em}
+.masthead .brand-mark{position:absolute;left:-8px;top:-6px;width:32px;height:25px;overflow:visible}
+.masthead .brand>span{font-family:"See Maths Nunito",var(--font);font-weight:900;line-height:1.2}
+.assignment-search{display:flex;align-items:center;width:min(100%,584px);height:50px;margin:12px auto 0;border:1px solid var(--line);border-radius:26px;background:#fff;overflow:hidden}
+.assignment-search:focus-within{border-color:#80b4ae;box-shadow:0 0 0 3px #087e7812}
+.assignment-search .search-input{height:48px;background:transparent;border:0;border-radius:0;padding:12px 20px;font-size:15px;outline:0}
+.assignment-search>button{height:42px;flex:none;margin-right:4px;padding:0 18px;border:0;border-radius:22px;background:transparent;color:var(--teal-dark);font-size:14px;font-weight:650}
+.assignment-search>button:hover{background:#edf5f3}
+.assignment-filters{display:flex;align-items:center;justify-content:center;gap:14px;margin:18px auto 30px}
+.assignment-filters .mine-filter{display:inline-flex;align-items:center;gap:9px;min-height:42px;padding:7px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--muted);font-size:14px;font-weight:650;cursor:pointer}
+.filter-tick{display:grid;place-items:center;width:23px;height:23px;border-radius:50%;background:#edf0f4;color:#a5adb9;font-size:16px;font-weight:800}
+.mine-filter[aria-pressed="true"]{background:#edf8f1;border-color:#add3bc;color:#21623b}
+.mine-filter[aria-pressed="true"] .filter-tick{background:#d1ecd9;color:#25824a}
+.assignment-results .assignment-item{background:#fff}
+@media(max-width:600px){.assignment-search{margin-top:0}.assignment-search .search-input{font-size:14px;padding-left:15px}.assignment-search>button{padding:0 13px}.masthead .brand{padding:14px 0 0 10px}.masthead .brand-mark{left:-5px;top:-5px;width:28px;height:22px}}
+
+.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
