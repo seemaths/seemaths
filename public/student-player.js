@@ -1,4 +1,4 @@
-import { prepareStudent, watchProgress } from './student-session.js?v=15';
+import { prepareStudent, watchProgress } from './student-session.js?v=16';
 import { downloadActivity } from './offline-downloads.js?v=2';
 
 // Resolve the participant before the player creates/restores its browser attempt.

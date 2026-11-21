@@ -131,3 +131,18 @@ body{position:relative;min-height:100svh}
 .player-setting input:checked+span{background:var(--teal);color:#fff}
 .player-setting input:focus-visible+span{outline:0}
 @media(max-width:480px){.activity-controls .setting>label,.activity-controls .setting>legend{display:grid;gap:4px;min-height:42px;align-content:start}}
+
+/* Share the created exercise beside the player selector. */
+.exercise-bottom-row{display:flex;align-items:center;gap:24px;margin-top:20px;min-width:0}
+.exercise-bottom-row .player-setting{margin:0;flex:0 0 196px;align-self:center}
+.exercise-share{flex:1;min-width:0;text-align:left}
+.exercise-share-url{display:block;width:fit-content;max-width:100%;color:var(--teal-dark);font-size:clamp(16px,1.6vw,21px);font-weight:800;letter-spacing:-.45px;text-decoration:none;overflow-wrap:anywhere;line-height:1.4}
+.exercise-share-url:hover{text-decoration:underline}
+.exercise-share-actions{display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px;margin-top:6px}
+.exercise-share-actions button,.exercise-share-actions a,.exercise-share-actions summary{border:0;background:none;color:#4b686c;font:650 12px/1.5 var(--font);padding:5px 0;text-decoration:none;cursor:pointer;white-space:nowrap}
+.exercise-share-actions button:hover,.exercise-share-actions a:hover,.exercise-share-actions summary:hover{color:var(--teal-dark);text-decoration:underline}
+.exercise-share-more{position:relative}.exercise-share-more summary{list-style:none}.exercise-share-more summary::-webkit-details-marker{display:none}.exercise-share-more summary::after{content:' ▾'}
+.exercise-share-menu{position:absolute;z-index:5;right:0;top:100%;display:grid;min-width:120px;gap:3px;background:#fff;border:1px solid #d4e5e2;border-radius:10px;padding:8px 14px;box-shadow:0 6px 24px #123d4615}
+@media(max-width:1100px){.exercise-bottom-row{gap:16px;flex-wrap:wrap}.exercise-share{flex-basis:260px}}
+@media(max-width:800px){.activity-controls .finish{width:100%;justify-self:stretch}.activity-controls .actions{flex-direction:row;justify-content:flex-end}.activity-controls .actions button{width:auto;flex:0 1 210px}.exercise-share-url{font-size:20px}}
+@media(max-width:540px){.exercise-bottom-row{align-items:flex-start}.exercise-share{flex-basis:100%}.activity-controls .actions button{font-size:14px;min-width:0}.exercise-share-actions{gap:6px 16px}.exercise-share-actions button,.exercise-share-actions a,.exercise-share-actions summary{font-size:13px;min-height:36px;display:inline-flex;align-items:center}.exercise-share-url{font-size:21px}}

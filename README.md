@@ -83,7 +83,7 @@ with help/check counts and active time retained. Completion includes the bonus.
 Progress sends on activity events, visibility changes and reconnect, with no
 periodic polling. Existing standalone Arcade and Sit-N-Study remain independent.
 
-## Assignment portal
+## Exercise portal
 
 The independent FastAPI application lives in `assignments-portal/`. See its
 [setup instructions](assignments-portal/README.md) and
@@ -91,10 +91,20 @@ The independent FastAPI application lives in `assignments-portal/`. See its
 It uses SQLite locally and a dedicated SeeMaths Supabase PostgreSQL project in
 production. It does not use Sit-N-Study's database or Supabase Auth.
 
-Assignments are live on the public site. Copying a practice/exam link creates an
-assignment and reveals the private **Manage assignment** link. Students open the
-questions directly; a four-digit, click-to-copy Student Id appears in the fixed
-See Maths toolbar. No separate student page or login is required.
+The website calls shared activities **Exercises**. Student links use
+`https://player.seemaths.org/2212` for Standard or
+`https://arcade.seemaths.org/2212` for Arcade. Opening either root address shows
+an empty player with a four-digit exercise PIN input; Arcade also shows its hero
+artwork. The PIN resolves exactly to an existing exercise. Its saved recipe
+selects the player, so a PIN entered on the other host redirects to the matching
+host before joining. The visible player address stays at `/2212` during play.
+PSAT and NAPLAN keep their independent routes and fixed question sets.
+
+`/exercises` opens the exercise library; `/assignments`, old `/play` links and
+`/a/…` links remain supported. Internal API names, database tables and browser
+storage keys retain their existing names for compatibility. The API allows
+student writes from both official player origins. Deploy the portal API along
+with the website and configure the new `player.seemaths.org` Cloudflare domain.
 
 The assignment backend runs at `https://seemaths-assignments.vercel.app` in the
 separate `seemaths` Vercel account (Sydney function region), backed by the dedicated

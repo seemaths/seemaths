@@ -16,3 +16,11 @@ test('exam time and Arcade launch choice survive copying without serialising sta
   assert.equal(arcade.searchParams.get('player'),'arcade');assert.equal(arcade.searchParams.has('stages'),false);
   assert.equal(arcade.searchParams.get('assignment'),item.id);
 });
+
+test('four-digit PIN links use the matching player host and contain no recipe or credentials',()=>{
+  for (const player of ['standard','arcade']) {
+    const url=new URL(studentAssignmentURL({...item,reference:'0012',recipe:{...item.recipe,player}},'https://seemaths.org'));
+    assert.equal(url.hostname,player==='arcade'?'arcade.seemaths.org':'player.seemaths.org');
+    assert.equal(url.pathname,'/0012');assert.equal(url.search,'');assert.equal(url.hash,'');
+  }
+});
