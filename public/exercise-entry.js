@@ -8,7 +8,7 @@ function entry(message = '') {
   root.className = 'exercise-entry';
   root.replaceChildren();
   const heading = document.createElement('h1');
-  const home = document.createElement('a'); home.className = 'exercise-home-logo';
+  const home = document.createElement('a'); home.className = 'exercise-home-logo seemaths-brand';
   home.href = 'https://seemaths.org/'; home.setAttribute('aria-label','See Maths home');
   const mark = document.createElement('img'); mark.src = '/seemaths-logo.svg'; mark.alt = '';
   const wordmark = document.createElement('span'); wordmark.textContent = 'See Maths';
@@ -100,7 +100,7 @@ async function openExercise() {
     globalThis.seemathsExercisePath = '/' + pin;
     history.replaceState(null, '', url);
     root.className = ''; root.textContent = '';
-    await import('/student-player.js?v=17');
+    await import('/student-player.js?v=18');
   } catch (error) {
     entry(error.name === 'TimeoutError' || error instanceof TypeError ? 'Connect to the internet and try again.' : error.message);
   } finally {root.removeAttribute('aria-busy');}

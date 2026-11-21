@@ -53,8 +53,8 @@ export async function buildQuodes(output) {
     }
     await exportRoute('/play/','play/index.html');
     let shell=await readFile(path.join(output,'play/index.html'),'utf8');
-    shell=shell.replace('/runtime/seemaths-player.js','/student-player.js?v=17')
-      .replace('</head>','<link rel="stylesheet" href="/student-session.css?v=10"></head>');
+    shell=shell.replace('/runtime/seemaths-player.js','/student-player.js?v=18')
+      .replace('</head>','<link rel="stylesheet" href="/student-session.css?v=11"><link rel="stylesheet" href="/seemaths-brand.css?v=1"></head>');
     await write('play/index.html',shell);
     let player = await readFile(path.join(output,'runtime/seemaths-player.js'),'utf8');
     player = player.replace('readRecipe(search = location.search)', 'readRecipe(search = globalThis.seemathsExerciseSearch || location.search)')
@@ -132,7 +132,7 @@ export async function buildQuodes(output) {
       .replace('event.ports[0]?.postMessage({ missing: [...new Set(missing)] });', 'event.ports[0]?.postMessage({ activityDownloads: 1, missing: [...new Set(missing)] });')
       .replace(' || url.pathname.startsWith("/arcade-player/")','')
       .replace('(?:runtime|seemaths-assets|','(?:assignment-arcade|runtime|seemaths-assets|arcade-player|')
-      .replace('return seeMathsShell?.has(url.pathname)', 'return url.pathname === "/seemaths-logo.svg" || /^\\/(?:offline-downloads|student-player|student-session|student-identity|player-theme|exercise-entry|progress-outcomes)\\.(?:js|css)$/.test(url.pathname) || seeMathsShell?.has(url.pathname)')
+      .replace('return seeMathsShell?.has(url.pathname)', 'return url.pathname === "/seemaths-logo.svg" || url.pathname === "/seemaths-brand.css" || /^\\/(?:offline-downloads|student-player|student-session|student-identity|player-theme|exercise-entry|progress-outcomes)\\.(?:js|css)$/.test(url.pathname) || seeMathsShell?.has(url.pathname)')
       .replace('const response = await fetch(request);\n      await remember', 'const stored = await cache.match(request);\n      if (stored && request.mode !== "navigate") return stored;\n      const response = await fetch(request);\n      await remember');
     sw += `\nself.addEventListener('message', event => {\n  if (event.data?.type === 'activate-offline-update') event.waitUntil(self.skipWaiting());\n});\n`;
     // Root pages are cached during installation, including a plain /play/ shell
