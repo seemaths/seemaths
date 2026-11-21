@@ -1052,3 +1052,12 @@ dialog .actions {
 .assignment-filters:empty{display:none}
 @media(max-width:1000px){.assignment-toolbar{display:flex;justify-content:center}.assignment-toolbar .assignment-search{flex:1;max-width:584px}.assignment-toolbar .assignment-filters{flex:none}}
 @media(max-width:600px){.assignment-toolbar{gap:10px;margin-top:0}.assignment-filters .mine-filter{padding:7px 10px;gap:6px;font-size:13px}}
+
+/* The reference is the primary row label; secondary details stay compact. */
+.assignment-item{grid-template-columns:130px minmax(110px,1fr) max-content max-content max-content;gap:22px}
+.assignment-item .assignment-number{font-size:1.25rem;font-weight:750;color:var(--ink)}
+.assignment-item h3 a{color:var(--ink)}
+.assignment-dates{font-variant-numeric:tabular-nums}
+.get-assignment-link{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:126px;min-height:40px;padding:8px 12px;border:0;border-radius:10px;background:#e6f1ed;color:var(--teal-dark);font-size:14px;font-weight:700;white-space:nowrap}
+.get-assignment-link:hover{background:#d8ebe3}
+.link-copied-tag{padding:2px 4px;border-radius:4px;background:#c9efd7;color:#166534;font-size:10px;font-weight:750}

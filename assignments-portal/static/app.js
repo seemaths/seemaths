@@ -1,3 +1,4 @@
+import {studentAssignmentURL} from '/assignment-links.js?v=1';
 import '/assignment-library.js?v=1';
 const root = document.querySelector("#app");
 const topics = {
@@ -109,6 +110,7 @@ function remember(assignment, key) {
       key,
       reference: assignment.reference,
       recipe: assignment.recipe,
+      createdAt: assignment.createdAt,
       expiresAt: assignment.expiresAt,
     },
     ...savedAssignments().filter((a) => a.id !== assignment.id),
@@ -124,7 +126,8 @@ function toast(message) {
 async function copy(text, message = "Link copied") {
   try {
     await navigator.clipboard.writeText(text);
-    toast(message);
+    if(message) toast(message);
+    return true;
   } catch {
     const dialog = document.createElement("dialog");
     dialog.innerHTML =
@@ -135,6 +138,7 @@ async function copy(text, message = "Link copied") {
     dialog.onclose = () => dialog.remove();
     dialog.showModal();
     dialog.querySelector("input").select();
+    return false;
   }
 }
 function download(name, text, type = "text/plain") {
@@ -188,8 +192,10 @@ function errorPage(error) {
   root.innerHTML = `<section class="error-page"><p class="eyebrow">See Maths assignments</p><h1>${error.status === 410 ? "Assignment expired" : error.status === 403 ? "Private link needed" : "Could not open this page"}</h1><p class="muted">${escape(error.message)}</p><div class="actions"><a class="primary" href="/assignments">Assignments</a><button class="secondary" id="retry">Try again</button></div></section>`;
   document.querySelector("#retry").onclick = () => location.reload();
 }
+const shortDate = timestamp => new Date(timestamp*1000).toLocaleDateString('en-AU',{day:'numeric',month:'short'});
 function listItem(item) {
-  return `<a class="assignment-item" href="/manage/${item.id}" title="${escape(topicLabel(item.recipe.topic))}"><h3>${escape(topicLabel(item.recipe.topic))}</h3><span class="reference">${ref(item.reference)}</span><span>${item.recipe.count} ${item.recipe.count === 1 ? 'question' : 'questions'}</span><span>Levels ${item.recipe.levelMin}–${item.recipe.levelMax}</span><span>Expires ${date(item.expiresAt)}</span><span class="pill ${item.closed ? "closed" : ""}">${item.closed ? "Closed" : item.recipe.mode === "exam" ? "Exam" : "Practice"}</span></a>`;
+  const createdAt=item.createdAt ?? item.expiresAt-(config.lifetimeDays || 7)*86400;
+  return `<article class="assignment-item"><a class="assignment-number reference" href="/manage/${item.id}" aria-label="View assignment ${ref(item.reference)}">${ref(item.reference)}</a><h3 title="${escape(topicLabel(item.recipe.topic))}"><a href="/manage/${item.id}">${escape(topicLabel(item.recipe.topic))}</a></h3><span>${item.recipe.count} ${item.recipe.player==='arcade' ? 'stages' : item.recipe.count === 1 ? 'question' : 'questions'}</span><span class="assignment-dates">${shortDate(createdAt)} (expires ${shortDate(item.expiresAt)})</span><button class="get-assignment-link" type="button" data-assignment-id="${item.id}" aria-label="Get link for assignment ${ref(item.reference)}">Get Link<span class="link-copied-tag" role="status" aria-live="polite" hidden>Copied</span></button></article>`;
 }
 function searchTerm(value) {
   let term=value.trim();
@@ -219,6 +225,11 @@ async function home() {
       } else rows=(await api(`/api/assignments?q=${encodeURIComponent(searchTerm(input.value))}&offset=${offset}`)).assignments;
       if(version!==requestVersion) return;
       target.innerHTML=rows.length?rows.map(a=>listItem(a)).join(''):'<p class="muted">No active assignments found.</p>';
+      target.querySelectorAll('.get-assignment-link').forEach(button=>{button.onclick=async()=>{
+        button.disabled=true;
+        try {const item=rows.find(a=>a.id===button.dataset.assignmentId);if(await copy(studentAssignmentURL(item),null)) button.querySelector('.link-copied-tag').hidden=false;}
+        finally {button.disabled=false;}
+      };});
       document.querySelector('#pagination').innerHTML=`${offset?'<button class="secondary" id="previous-page">Previous</button>':''}${rows.length===25?'<button class="secondary" id="next-page">More assignments</button>':''}`;
       document.querySelector('#previous-page')?.addEventListener('click',()=>{offset-=25;search();});
       document.querySelector('#next-page')?.addEventListener('click',()=>{offset+=25;search();});
@@ -289,7 +300,7 @@ async function dashboard(id) {
   if(!key) for(const selector of ['#copy-management','#save-link','#close-assignment','#delete-assignment']) document.querySelector(selector).hidden=true;
 
   document.querySelector("#refresh").onclick = refresh;
-  document.querySelector("#copy-student").onclick = () => copy(studentURL(id));
+  document.querySelector("#copy-student").onclick = () => copy(studentAssignmentURL(assignment));
   document.querySelector("#copy-management").onclick = () =>
     copy(privateURL(id, key), "Private management link copied");
   document.querySelector("#save-link").onclick = () =>

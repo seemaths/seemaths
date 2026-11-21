@@ -345,10 +345,11 @@
       const storageKey = 'seemaths.assignments.managed.v1';
       let existing = [];
       try { existing = JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch {}
-      localStorage.setItem(storageKey, JSON.stringify([{id:data.id,key:data.managementToken,reference:data.reference,recipe:data.recipe,expiresAt:data.expiresAt}, ...existing.filter(a => a.id !== data.id)]));
+      localStorage.setItem(storageKey, JSON.stringify([{id:data.id,key:data.managementToken,reference:data.reference,recipe:data.recipe,createdAt:data.createdAt,expiresAt:data.expiresAt}, ...existing.filter(a => a.id !== data.id)]));
       sharedAssignments.set(exercise, assignment);
     }
-    const url = new URL(exercise); url.searchParams.set('assignment', assignment.id); return url.href;
+    const {studentAssignmentURL}=await import('/assignment-links.js?v=1');
+    return studentAssignmentURL(assignment);
   }
   $('copy-link').addEventListener('click', async () => {
     if (!validate(true)) return;
