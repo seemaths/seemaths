@@ -133,7 +133,7 @@ export async function buildQuodes(output) {
       .replace(' || url.pathname.startsWith("/arcade-player/")','')
       .replace('(?:runtime|seemaths-assets|','(?:assignment-arcade|runtime|seemaths-assets|arcade-player|')
       .replace('return seeMathsShell?.has(url.pathname)', 'return url.pathname === "/seemaths-logo.svg" || /^\\/(?:offline-downloads|student-player|student-session|student-identity|player-theme|exercise-entry|progress-outcomes)\\.(?:js|css)$/.test(url.pathname) || seeMathsShell?.has(url.pathname)')
-      .replace('const response = await fetch(request);\n      await remember', 'const stored = await cache.match(request);\n      if (stored) return stored;\n      const response = await fetch(request);\n      await remember');
+      .replace('const response = await fetch(request);\n      await remember', 'const stored = await cache.match(request);\n      if (stored && request.mode !== "navigate") return stored;\n      const response = await fetch(request);\n      await remember');
     sw += `\nself.addEventListener('message', event => {\n  if (event.data?.type === 'activate-offline-update') event.waitUntil(self.skipWaiting());\n});\n`;
     // Root pages are cached during installation, including a plain /play/ shell
     // so another recipe can open offline after the first exercise download.
