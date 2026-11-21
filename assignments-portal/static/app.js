@@ -217,6 +217,7 @@ async function refreshLegacyReferences() {
   } catch {toast('Could not update saved exercise numbers. Reopen the page to try again.');}
 }
 async function home() {
+  document.body.classList.add('exercise-list-view');
   await refreshLegacyReferences();
   const saved=savedAssignments();
   let mine=new URLSearchParams(location.search).get('view')==='mine' && saved.length>0;

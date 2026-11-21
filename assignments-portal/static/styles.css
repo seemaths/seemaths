@@ -1089,3 +1089,11 @@ dialog .actions {
 .student-count{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:25px;height:25px;padding:0 5px;border-radius:50%;background:#e5f1ed;color:var(--teal-dark);font-size:12px;font-weight:650;font-variant-numeric:tabular-nums}
 
 .assignment-reference-tag{display:inline-flex;align-items:center;margin:0 0 14px;padding:5px 14px;border-radius:999px;background:var(--teal-dark);color:#fff;font-size:1rem;font-weight:750;letter-spacing:.08em;font-variant-numeric:tabular-nums}
+
+/* Match the homepage gap between its brand and first content. */
+.exercise-list-view .masthead{padding-bottom:0}
+.exercise-list-view main{padding-top:48px}
+.exercise-list-view .assignment-toolbar{margin-top:0}
+@media(min-width:1300px){.exercise-list-view main{padding-top:54px}}
+@media(max-width:760px){.exercise-list-view main{padding-top:34px}}
+@media(max-width:540px){.exercise-list-view main{padding-top:24px}}
