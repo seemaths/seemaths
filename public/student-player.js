@@ -10,6 +10,7 @@ function installStandardHeading() {
     const home = heading?.querySelector('.paper-home-link');
     if (!home || heading.dataset.seemathsBrand === 'home') return;
     heading.classList.add('seemaths-standard-branding');
+    home.classList.add('seemaths-brand');
     home.href = 'https://seemaths.org/'; home.title = 'See Maths home';
     home.setAttribute('aria-label', 'See Maths home');
     const logo = home.querySelector('.paper-brand-icon');

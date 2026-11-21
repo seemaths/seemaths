@@ -41,14 +41,6 @@ body:has(.seemaths-opening) .seemaths-activity-bar{display:none!important}
   #app .paper-footer .paper-dots{scrollbar-color:var(--player-border,#56647c) transparent}
 }
 
-@font-face{font-family:SeeMathsBrand;src:url('/nunito-brand.ttf') format('truetype');font-display:swap}
-@media screen {
-  #app .paper-heading-with-layout .paper-home-link{position:relative;display:inline-flex;align-items:flex-start;padding:16px 0 0 12px;gap:0;text-decoration:none}
-  #app .paper-heading-with-layout .paper-home-link .paper-brand-icon{position:absolute;left:-8px;top:-6px;width:32px;height:25px;border-radius:0;object-fit:contain}
-  #app .seemaths-wordmark{font:900 33px/1.2 SeeMathsBrand,Nunito,system-ui,sans-serif;letter-spacing:-.025em;color:inherit}
-}
-@media(max-width:540px){#app .seemaths-wordmark{font-size:29px}#app .paper-heading-with-layout .paper-home-link{padding:14px 0 0 10px}#app .paper-heading-with-layout .paper-home-link .paper-brand-icon{left:-5px;top:-5px;width:28px;height:22px}}
-
 /* Use the homepage logo and wordmark without the old activity title. */
 @media screen {
   #app .seemaths-standard-branding .paper-brand>h1{display:none!important}

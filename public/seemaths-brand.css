@@ -1,0 +1,6 @@
+@font-face{font-family:"See Maths Nunito";font-style:normal;font-weight:200 1000;font-display:swap;src:url('/nunito-brand.ttf?v=1000') format('truetype')}
+/* One logo definition for the homepage, exercise entry and Standard player. */
+.seemaths-brand.seemaths-brand{position:relative;display:inline-flex;align-items:flex-start;flex:none;padding:16px 0 0 12px;gap:0;text-decoration:none;font-family:"See Maths Nunito","Avenir Next",Avenir,Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:33px;font-style:normal;font-weight:900;line-height:normal;letter-spacing:-.025em;color:inherit;-webkit-font-smoothing:antialiased}
+.seemaths-brand.seemaths-brand>span{margin-left:0;font:inherit;letter-spacing:inherit;color:inherit}
+.seemaths-brand.seemaths-brand>:is(img,svg){position:absolute;left:-8px;top:-6px;width:32px;height:25px;border:0;border-radius:0;object-fit:contain;overflow:visible;background:transparent}
+@media(max-width:540px){.seemaths-brand.seemaths-brand{font-size:29px;padding:14px 0 0 10px}.seemaths-brand.seemaths-brand>:is(img,svg){left:-5px;top:-5px;width:28px;height:22px}}
