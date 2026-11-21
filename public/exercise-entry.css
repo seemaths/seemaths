@@ -10,7 +10,9 @@ body:has(.exercise-entry){margin:0;background:#f4f8f7;color:#123d46;font-family:
 @media(max-width:360px){.exercise-pin-boxes{gap:10px}.exercise-pin{width:56px;height:56px}}
 .exercise-entry [role=alert]{color:#a32732;min-height:1.5em}.exercise-entry>a{color:#126e68}
 
-.exercise-home-logo{display:inline-flex;align-items:center;gap:12px;color:inherit;text-decoration:none;letter-spacing:-.025em;font-weight:900}
-.exercise-home-logo img{width:58px;height:46px;object-fit:contain}
+.exercise-home-logo{position:relative;display:inline-flex;align-items:flex-start;padding:16px 0 0 12px;gap:0;color:inherit;text-decoration:none;font-size:33px;line-height:1.2;letter-spacing:-.025em;font-weight:900}
+.exercise-home-logo img{position:absolute;left:-8px;top:-6px;width:32px;height:25px;object-fit:contain}
 .exercise-home-logo:focus-visible{outline:3px solid #168a82;outline-offset:8px;border-radius:6px}
-@media(max-width:540px){.exercise-home-logo img{width:44px;height:36px}}
+@media(max-width:540px){.exercise-home-logo{font-size:29px;padding:14px 0 0 10px}.exercise-home-logo img{left:-5px;top:-5px;width:28px;height:22px}}
+
+.exercise-entry #exercise-entry-error{font-size:inherit;font-weight:700}
