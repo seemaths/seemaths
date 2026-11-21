@@ -259,6 +259,7 @@
   }
   function activityUrl() {
     const params = new URLSearchParams({topic, mode, count:String(bounded($('question-count'),20)), levelMin:$('level-min').value, levelMax:$('level-max').value, blueprint});
+    params.set('player', mode === 'practice' ? form.elements.player.value : 'standard');
     if (mode === 'exam') params.set('minutes', String(bounded($('exam-minutes'),30)));
     const url = new URL('/play', location.origin);
     url.search = params.toString();
@@ -268,6 +269,7 @@
     $('copy-feedback').hidden = true;
     if (!topic || !mode) return;
     $('duration-setting').hidden = mode !== 'exam';
+    $('player-setting').hidden = mode !== 'practice';
     $('open-activity-label').textContent = 'Self Study';
     $('activity-link').value = activityUrl();
     const count = bounded($('question-count'),20);
@@ -326,6 +328,7 @@
     update(); followSelection($('level-max'), nextAfterDifficulty());
   });
   $('exam-minutes').addEventListener('input', update);
+  form.querySelectorAll('[name="player"]').forEach(input => input.addEventListener('change', update));
   $('exam-minutes').addEventListener('change', () => followSelection($('exam-minutes'), document.querySelector('.actions')));
   document.querySelectorAll('[data-minutes]').forEach(button => button.addEventListener('click', () => { $('exam-minutes').value = button.dataset.minutes; update(); followSelection(button, document.querySelector('.actions')); }));
   $('activity-link').addEventListener('click', event => event.target.select());
@@ -338,9 +341,13 @@
       const params = new URL(exercise).searchParams;
       const recipe = Object.fromEntries(params);
       for (const key of ['count','levelMin','levelMax','minutes']) if (key in recipe) recipe[key] = Number(recipe[key]);
+      if (recipe.player === 'arcade') {
+        const {selectStages} = await import('/assignment-arcade/campaign.js');
+        recipe.stages = await selectStages(recipe);
+      }
       const response = await fetch('/api/assignments', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(recipe)});
       const data = await response.json();
-      if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Could not create the assignment.');
+      if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Could not create the exercise.');
       assignment = data;
       const storageKey = 'seemaths.assignments.managed.v1';
       let existing = [];

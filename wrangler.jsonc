@@ -5,9 +5,10 @@
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
-    "run_worker_first": true
+    "run_worker_first": ["/*"]
   },
   "routes": [
+    {"pattern": "player.seemaths.org", "custom_domain": true},
     {
       "pattern": "arcade.seemaths.org",
       "custom_domain": true
@@ -27,6 +28,7 @@
   ],
   "main": "worker.js",
   "vars": {
+    "STATIC_QUODES": "true",
     "BACKEND_ORIGIN": "https://psat.seemaths.org",
     "ASSIGNMENTS_ORIGIN": "https://seemaths-assignments.vercel.app"
   },

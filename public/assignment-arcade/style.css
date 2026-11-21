@@ -1,0 +1,31 @@
+body.assignment-arcade{margin:0;background:#14152b;color:#f7f8ff}
+.assignment-arcade #game{max-width:none;margin:0;padding:0}
+.assignment-arcade .arcade-question{width:100%;--paper-max-width:100%;color:#192847}
+.assignment-arcade .arcade-question > .paper-heading,
+.assignment-arcade .arcade-question > .paper-summary,
+.assignment-arcade .arcade-question > .paper-navigation,
+.assignment-arcade .arcade-question .paper-band,
+.assignment-arcade .arcade-question .paper-difficulty,
+.assignment-arcade .arcade-question .paper-next,
+.assignment-arcade .arcade-question .paper-try-another{display:none!important}
+.assignment-arcade .arcade-question .paper-sheet{margin:0;padding:0;max-width:none}
+.assignment-arcade .arcade-question .paper-question{margin:0;width:100%}
+.assignment-arcade .arcade-question .paper-practice-actions button[aria-label="Next question"]{display:none!important}
+.assignment-arcade .topbar .seemaths-student-id{display:grid;justify-items:center;align-content:center;gap:2px;margin-left:auto;padding:2px 8px;border:0;border-radius:8px;background:transparent;color:inherit;cursor:pointer}
+.assignment-arcade .home-topbar{display:flex;justify-content:space-between}
+.assignment-arcade .question-topbar{position:relative}
+.assignment-arcade .question-topbar .seemaths-student-id{position:absolute;right:0}
+.assignment-arcade .level-path{flex-wrap:wrap}
+@media(max-width:650px){.assignment-arcade .topbar .seemaths-student-id{padding:2px}.assignment-arcade .seemaths-student-id strong{font-size:20px}}
+.assignment-arcade .arcade-question.questionnaire{padding:0;background:transparent}
+.assignment-arcade .arcade-question .paper-question{border-radius:18px;background:#fffcf6;color:#20384b;box-shadow:0 16px 60px #0003}
+/* MathLive answer fields sit on light paper inside the dark Arcade shell. */
+.assignment-arcade .arcade-question math-field{color-scheme:light;color:#20384b;background:#fff;--caret-color:#20384b;--selection-color:#20384b;--selection-background-color:#cde5f4;--smart-fence-color:#20384b}
+.assignment-arcade .arcade-question .paper-question-body{padding:30px 32px;min-height:0}
+.assignment-arcade .arcade-question .paper-prompt{padding:0;margin:0 0 22px;background:transparent;border:0;font-size:20px;line-height:1.65;color:#20384b}
+.assignment-arcade .question-topbar .seemaths-student-id{right:clamp(14px,3vw,40px)}
+@media(max-width:650px){.assignment-arcade .arcade-question .paper-question-body{padding:22px 18px}.assignment-arcade .streak-hud.hud{gap:7px}.assignment-arcade .streak-figure{width:27px;height:40px}}
+.assignment-arcade .arcade-answer-resolved .paper-practice-actions{visibility:hidden;pointer-events:none}
+.assignment-arcade .arcade-question > .paper-footer{display:none!important}
+.assignment-arcade .stage.bonus > .button,.assignment-arcade .stage.bonus > .stage-state{right:76px}
+.assignment-arcade #game[data-screen="map"] .main{padding-bottom:90px}

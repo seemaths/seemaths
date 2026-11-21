@@ -7,7 +7,18 @@
 @media(max-width:650px){.paper-heading-with-layout .seemaths-student-id{padding:2px 4px;margin-left:2px;min-width:58px}.seemaths-student-id strong{font-size:22px}.seemaths-student-id span{font-size:9px}}
 @media print{.seemaths-student-id,.seemaths-student-message{display:none!important}}
 .seemaths-opening{position:fixed;inset:0;display:grid;place-items:center;pointer-events:none;--psat-primary:#243753}
+.seemaths-assignment-unavailable{max-width:640px;margin:12vh auto;padding:24px;color:#192847;font:18px/1.6 "Avenir Next",Avenir,sans-serif}
+.seemaths-assignment-unavailable h1{font-size:30px;line-height:1.2}
 .seemaths-opening .paper-loading-progress{width:min(280px,75vw)}
 body:has(.seemaths-opening) .seemaths-activity-bar{display:none!important}
+.seemaths-downloads{position:fixed;right:max(18px,env(safe-area-inset-right));z-index:101;width:min(190px,calc(100vw - 36px));padding:9px 11px;border:1px solid #e5e7ef;border-radius:9px;background:#fffffff5;box-shadow:0 2px 10px #19284710;color:#49536a;font:12px/1.4 "Avenir Next",Avenir,sans-serif;pointer-events:auto}
+.seemaths-downloads[hidden]{display:none}
+.seemaths-downloads>div{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px}
+.seemaths-downloads button{padding:0;border:0;background:none;color:#6156dc;font:inherit;cursor:pointer}
+.seemaths-downloads progress{display:block;appearance:none;width:100%;height:3px;border:0;border-radius:3px;overflow:hidden;background:#ececf4;accent-color:#6156dc}
+.seemaths-downloads progress::-webkit-progress-bar{background:#ececf4}
+.seemaths-downloads progress::-webkit-progress-value{background:#6156dc;border-radius:3px}
+.seemaths-downloads progress::-moz-progress-bar{background:#6156dc;border-radius:3px}
+@media print{.seemaths-downloads{display:none!important}}
 #app .paper-heading-with-layout .seemaths-student-id{margin-left:auto}
 @media(max-width:650px){#app .paper-heading-with-layout:has(.seemaths-student-id){justify-content:space-between}#app .paper-heading-with-layout:has(.seemaths-student-id) .paper-brand{display:flex}#app .paper-heading-with-layout:has(.seemaths-student-id) .paper-title-detail{display:none}}

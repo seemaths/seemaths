@@ -37,9 +37,9 @@ export async function bindStudentAttempt(assignmentId,key,attemptId) {
 }
 export async function nextStudentRevision(assignmentId,key,floor=0,metadata={}) {
   return updateIdentity(assignmentId,(existing,store)=>{
-    if(existing && existing.key!==key) throw new Error('Reopen this assignment to restore your Student Id.');
+    if(existing && existing.key!==key) throw new Error('Reopen this exercise to restore your Student Id.');
     const record=existing || {assignmentId,key,attemptId:metadata.attemptId,expiresAt:metadata.expiresAt};
-    if(!record.expiresAt) throw new Error('Reopen this assignment to restore your Student Id.');
+    if(!record.expiresAt) throw new Error('Reopen this exercise to restore your Student Id.');
     const revision=Math.max(record.revision || 0,floor)+1;store.put({...record,revision});return revision;
   });
 }

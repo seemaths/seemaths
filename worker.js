@@ -2,6 +2,7 @@
 const UPSTREAM_ORIGIN = 'https://psat.seemaths.org';
 const LEGACY_HOSTS = new Set(['seemaths.com', 'www.seemaths.com']);
 const MATHSPACE_HOST = 'mathspace.seemaths.org';
+const PLAYER_HOST = 'player.seemaths.org';
 const ARCADE_HOST = 'arcade.seemaths.org';
 const GENERATOR_ASSET = /^\/(?:algebra|arithmetic|geometry|measurement|number|statistics)-[a-z0-9_]+\/(?:web|player)\/.+/;
 
@@ -38,6 +39,21 @@ export default {
     }
     const mathspaceHost = incoming.hostname === MATHSPACE_HOST;
     const arcadeHost = incoming.hostname === ARCADE_HOST;
+    const playerHost = incoming.hostname === PLAYER_HOST;
+    if ((arcadeHost || playerHost) && (publicPath === '/' || /^\/[0-9]{4}\/?$/.test(publicPath))) {
+      const shell = new URL('/exercise-player.html', incoming);
+      const response = await env.ASSETS.fetch(new Request(shell, request));
+      const headers = new Headers(response.headers);
+      headers.set('Cache-Control', 'no-store');
+      return new Response(response.body, {status:response.status, headers});
+    }
+    if (env.STATIC_QUODES === 'true' &&
+        (/^\/(?:manage|a)(?:\/|$)/.test(incoming.pathname) || /^\/(?:assignments|exercises)\/?$/.test(incoming.pathname) || incoming.pathname.startsWith('/assets/'))) {
+      // The portal shell contains no student data; live progress stays in its API.
+      const asset = new URL(incoming);
+      if (!incoming.pathname.startsWith('/assets/')) asset.pathname='/assignment-dashboard/';
+      return env.ASSETS.fetch(new Request(asset,request));
+    }
     const portalPath = /^\/api\/assignments(?:\/|$)/.test(incoming.pathname)
       || /^\/(?:manage|a)(?:\/|$)/.test(incoming.pathname)
       || incoming.pathname === '/assignments' || incoming.pathname === '/api/config'
@@ -51,6 +67,29 @@ export default {
     }
     if (arcadeHost && incoming.pathname === '/') incoming.pathname = '/arcade-player/';
     if (mathspaceHost) incoming.pathname = mathspaceRootPath(incoming.pathname);
+    if (env.STATIC_QUODES === 'true') {
+      // Static deployments never forward maths generation or browser files to
+      // the old application host. Only the assignment APIs above use a server.
+      if (incoming.pathname === '/api/client-events') return new Response(null,{status:204});
+      if (request.method !== 'GET' && request.method !== 'HEAD') {
+        return Response.json({detail:'Question generation runs in the browser.'},{status:405,headers:{Allow:'GET, HEAD'}});
+      }
+      const asset = new URL(incoming);
+      if (asset.pathname === '/api/quode') asset.pathname='/api/quodes/'+encodeURIComponent(asset.searchParams.get('quode') || '');
+      let response=await env.ASSETS.fetch(new Request(asset,request));
+      if (mathspaceHost && response.ok && publicPath === '/') {
+        response=new Response((await response.text()).replace('href="/mathspace-player/manifest.webmanifest"','href="/manifest.webmanifest"').replace('data-app="mathspace" defer','data-app="mathspace" data-scope="/" defer'),response);
+        response.headers.delete('Content-Length');
+      } else if (mathspaceHost && response.ok && publicPath === '/manifest.webmanifest') {
+        response=Response.json({...await response.json(),id:'/',scope:'/',start_url:'/'});
+      } else if (mathspaceHost && publicPath === '/service-worker.js') {
+        response=new Response(response.body,response);response.headers.set('Service-Worker-Allowed','/');
+      } else if (arcadeHost && response.ok && publicPath === '/') {
+        response=new Response((await response.text()).replace('<head>','<head><base href="/arcade-player/">').replace("register('./sw.js')","register('./sw.js', {scope:'/'})"),response);
+        response.headers.delete('Content-Length');
+      }
+      return response;
+    }
     if (!isProxyPath(incoming.pathname)) return env.ASSETS.fetch(request);
 
     const backendOrigin = new URL(env.BACKEND_ORIGIN || UPSTREAM_ORIGIN).origin;

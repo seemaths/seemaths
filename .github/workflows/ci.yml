@@ -21,7 +21,9 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm test
-      - run: npm run build
+      # Browser engine sources are a separate private checkout; the complete
+      # runtime export is validated locally before publishing.
+      - run: npm run build -- --site-only
 
   portal:
     name: Assignment API

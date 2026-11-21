@@ -98,7 +98,7 @@ body{position:relative;min-height:100svh}
 @media(max-width:680px){.masthead{flex-wrap:wrap;gap:18px}.player-links{width:100%;padding-top:0;gap:8px}.player-link{flex:1;padding:10px 12px;font-size:13px;border-radius:12px;gap:7px}.player-link svg{width:20px;height:20px}}
 @media(prefers-reduced-motion:reduce){.player-link{transition:none}}
 
-/* One controls row: Questions, Difficulty, then stacked study actions. */
+/* Compact player selection centred below the sliders; study actions alongside. */
 .activity-controls{display:grid;grid-template-columns:minmax(0,1fr) 230px;align-items:center;gap:32px;padding:24px 28px;background:#fff;border:1px solid #e8ecf4;border-radius:23px;margin-bottom:32px}
 .activity-controls:has(#settings-step[hidden]){display:none}
 .activity-controls .preferences{padding:0;margin:0;background:none;border:0;box-shadow:none;min-width:0}
@@ -108,7 +108,7 @@ body{position:relative;min-height:100svh}
 .activity-controls .actions button{width:100%;height:56px;min-height:56px;font-size:16px;padding:12px}
 .activity-controls .status{margin:8px 0 0;font-size:13px}
 @media(max-width:800px){.activity-controls{grid-template-columns:minmax(0,1fr);gap:24px;padding:22px 20px}.activity-controls .finish{width:min(100%,320px);justify-self:center}}
-@media(max-width:480px){.activity-controls .settings-grid{grid-template-columns:minmax(0,1fr);gap:24px}}
+@media(max-width:480px){.activity-controls .settings-grid{gap:0 16px}.activity-controls .actions button{font-size:13px;padding:10px 6px}.activity-controls .setting label,.activity-controls .setting legend{font-size:14px}.activity-controls .setting output{font-size:13px}}
 .range:focus-visible{outline:0;box-shadow:none}
 .range:focus-visible::-webkit-slider-thumb{background:var(--teal-dark)}
 .range:focus-visible::-moz-range-thumb{background:var(--teal-dark)}
@@ -122,3 +122,12 @@ body{position:relative;min-height:100svh}
 /* Copy confirmation stays inside its action without adding rows. */
 .activity-controls .copy-button:has(.copy-feedback:not([hidden])){font-size:14px;gap:8px}
 .copy-feedback{display:inline-flex;align-items:center;padding:3px 6px;border-radius:5px;background:#c9efd7;color:#166534;font-size:11px;font-weight:800;line-height:1.4;white-space:nowrap}
+
+
+ .player-setting{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px;width:196px;max-width:100%;border:1px solid #d4e5e2;border-radius:10px;padding:3px;margin:18px auto 0;background:#e6f1ef}
+.player-setting label{position:relative;display:grid;min-width:0;cursor:pointer;font-family:inherit;font-size:14px;font-weight:650;line-height:1.3;color:var(--teal-dark)}
+.player-setting label span{display:grid;place-items:center;min-height:32px;padding:6px 10px;border-radius:7px}
+.player-setting input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.player-setting input:checked+span{background:var(--teal);color:#fff}
+.player-setting input:focus-visible+span{outline:0}
+@media(max-width:480px){.activity-controls .setting>label,.activity-controls .setting>legend{display:grid;gap:4px;min-height:42px;align-content:start}}

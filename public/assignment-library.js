@@ -9,7 +9,7 @@
   } catch {}
   const header=document.querySelector('.masthead');
   if(header && document.querySelector('.player-links')) {
-    const link=document.createElement('a');link.className='assignments-link';link.href='/assignments';link.textContent='Assignments';
+    const link=document.createElement('a');link.className='assignments-link';link.href='/exercises';link.textContent='Exercises';
     header.insertBefore(link,header.querySelector('.player-links'));
   }
 })();

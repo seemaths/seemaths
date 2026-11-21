@@ -27,6 +27,11 @@ class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class ArcadeStage(StrictModel):
+    quode: str = Field(pattern=r'^(?:algebra|arithmetic|geometry|measurement|number|statistics)-[a-z0-9_]+$')
+    title: str = Field(min_length=1, max_length=200)
+
+
 class Recipe(StrictModel):
     topic: str = Field(default='random', max_length=100)
     mode: Literal['practice', 'exam'] = 'practice'
@@ -35,6 +40,8 @@ class Recipe(StrictModel):
     levelMax: int = Field(default=5, ge=1, le=5, strict=True)
     minutes: int = Field(default=30, ge=1, le=180, strict=True)
     blueprint: Optional[str] = Field(default=None, pattern=r'^[a-zA-Z0-9_-]{1,100}$')
+    player: Literal['standard', 'arcade'] = 'standard'
+    stages: Optional[list[ArcadeStage]] = Field(default=None, min_length=1, max_length=99)
 
     @model_validator(mode='after')
     def levels(self):
@@ -43,6 +50,13 @@ class Recipe(StrictModel):
             raise ValueError('Choose a valid maths topic.')
         if self.levelMin > self.levelMax:
             raise ValueError('Minimum level cannot exceed maximum level.')
+        if self.player == 'arcade':
+            if self.mode != 'practice' or not self.stages or len(self.stages) != self.count:
+                raise ValueError('Arcade practice requires one selected code per stage.')
+            if self.topic != 'random' and any(s.quode.split('-')[0] not in subjects for s in self.stages):
+                raise ValueError('Arcade codes must match the selected topics.')
+        elif self.stages is not None:
+            raise ValueError('Stage selections belong to Arcade practice.')
         return self
 
 
@@ -166,9 +180,9 @@ def create_app(database_url=None, now=None, rate_secret=None):
         selection='assignments.*,(SELECT COUNT(*) FROM participants WHERE assignment_id=assignments.id) AS student_count' if count_students else '*'
         row = tx.execute('SELECT '+selection+' FROM assignments WHERE id=?' + (' FOR UPDATE' if lock and db.postgres else ''), (str(assignment_id),)).fetchone()
         if row is None:
-            raise HTTPException(404, 'Assignment not found or expired.')
+            raise HTTPException(404, 'Exercise not found or expired.')
         if row['expires_at'] <= current_time():
-            raise HTTPException(410, 'This assignment has expired. Its progress is no longer available.')
+            raise HTTPException(410, 'This exercise has expired. Its progress is no longer available.')
         return row
 
     def authorize(request, stored_hash):
@@ -232,7 +246,7 @@ def create_app(database_url=None, now=None, rate_secret=None):
             if db.postgres:
                 tx.execute('SELECT pg_advisory_xact_lock(742001)')
             if tx.execute('SELECT COUNT(*) AS n FROM assignments WHERE expires_at>?', (created,)).fetchone()['n'] >= 1000:
-                raise HTTPException(503, 'Assignments are at capacity. Please try again later.')
+                raise HTTPException(503, 'Exercises are at capacity. Please try again later.')
             while tx.execute('SELECT id FROM assignments WHERE reference=?', (reference,)).fetchone():
                 reference = f'{secrets.randbelow(10_000):04d}'
             tx.execute('INSERT INTO assignments(id,reference,management_hash,recipe,created_at,expires_at) VALUES (?,?,?,?,?,?)',
@@ -248,7 +262,11 @@ def create_app(database_url=None, now=None, rate_secret=None):
     def resolve(recipe: Recipe, request: Request):
         # Legacy /play recipe links have no assignment UUID. One recipe/blueprint
         # resolves to one server-allocated assignment, never a teacher credential.
-        identifier = str(uuid5(NAMESPACE_URL, 'seemaths:activity:'+json.dumps(recipe.model_dump(), sort_keys=True)))
+        canonical = recipe.model_dump()
+        if recipe.player == 'standard':
+            canonical.pop('player')
+            canonical.pop('stages')
+        identifier = str(uuid5(NAMESPACE_URL, 'seemaths:activity:'+json.dumps(canonical, sort_keys=True)))
         return create_record(recipe, request, identifier, expose_management=False)
 
     @app.get('/api/assignments')
@@ -258,11 +276,11 @@ def create_app(database_url=None, now=None, rate_secret=None):
         if ids:
             values=ids.split(',')
             if len(values)>100:
-                raise HTTPException(422, 'Look up at most 100 assignments at a time.')
+                raise HTTPException(422, 'Look up at most 100 exercises at a time.')
             try:
                 identifiers=list({str(UUID(value)) for value in values})
             except ValueError:
-                raise HTTPException(422, 'Invalid assignment IDs.')
+                raise HTTPException(422, 'Invalid exercise IDs.')
             with db.connect() as tx:
                 rate(tx, 'search:'+peer(request), 90, 60)
                 rows=tx.execute('SELECT assignments.*,(SELECT COUNT(*) FROM participants WHERE assignment_id=assignments.id) AS student_count FROM assignments WHERE expires_at>? AND id IN ('+','.join('?' for _ in identifiers)+')', (current_time(),*identifiers)).fetchall()
@@ -284,9 +302,19 @@ def create_app(database_url=None, now=None, rate_secret=None):
         return {'assignments': [public(r) for r in rows]}
 
     @app.get('/api/assignments/{assignment_id}')
-    def get_assignment(assignment_id: UUID, request: Request):
+    def get_assignment(assignment_id: str, request: Request):
         with db.connect() as tx:
             rate(tx, 'read:'+peer(request), 180, 60)
+            if len(assignment_id) == 4 and assignment_id.isascii() and assignment_id.isdigit():
+                row = tx.execute('SELECT id FROM assignments WHERE reference=?', (assignment_id,)).fetchone()
+                if not row:
+                    raise HTTPException(404, 'Exercise not found or expired.')
+                assignment_id = row['id']
+            else:
+                try:
+                    assignment_id = str(UUID(assignment_id))
+                except ValueError:
+                    raise HTTPException(422, 'Enter a four-digit exercise PIN.')
             return public(assignment(tx, assignment_id,count_students=True))
 
     @app.post('/api/assignments/{assignment_id}/join')
@@ -303,14 +331,17 @@ def create_app(database_url=None, now=None, rate_secret=None):
             if previous:
                 return participant(previous)
             if row['closed']:
-                raise HTTPException(409, 'This assignment is closed to new students.')
-            if row['next_number'] > 100:
-                raise HTTPException(409, 'This assignment has reached its student limit.')
+                raise HTTPException(409, 'This exercise is closed to new students.')
+            used_numbers = {p['number'] for p in tx.execute('SELECT number FROM participants WHERE assignment_id=?', (str(assignment_id),)).fetchall()}
+            available_numbers = [number for number in range(100) if number not in used_numbers]
+            if len(used_numbers) >= 100 or not available_numbers:
+                raise HTTPException(409, 'This exercise has reached its student limit.')
             if tx.execute('SELECT COUNT(*) AS n FROM participants').fetchone()['n'] >= 10000:
                 raise HTTPException(503, 'Student sessions are at capacity. Please try again later.')
             identifier, timestamp = str(uuid4()), current_time()
+            number = secrets.choice(available_numbers)
             tx.execute('INSERT INTO participants(id,assignment_id,number,credential_hash,join_hash,started_at,updated_at) '
-                       'VALUES (?,?,?,?,?,?,?)', (identifier, str(assignment_id), row['next_number'], hashed, hashed, timestamp, timestamp))
+                       'VALUES (?,?,?,?,?,?,?)', (identifier, str(assignment_id), number, hashed, hashed, timestamp, timestamp))
             tx.execute('UPDATE assignments SET next_number=next_number+1 WHERE id=?', (str(assignment_id),))
             return participant(tx.execute('SELECT * FROM participants WHERE id=?', (identifier,)).fetchone())
 
@@ -395,9 +426,10 @@ def create_app(database_url=None, now=None, rate_secret=None):
         with db.connect() as tx:
             row = assignment(tx, assignment_id)
             recipe = json.loads(row['recipe'])
-        return RedirectResponse('/play?' + urlencode({**recipe, 'assignment': str(assignment_id)}))
+        return RedirectResponse('/play?' + urlencode({**{k:v for k,v in recipe.items() if k != 'stages'}, 'assignment': str(assignment_id)}))
 
     @app.get('/')
+    @app.get('/exercises')
     @app.get('/assignments')
     @app.get('/manage/{assignment_id}')
     def page(assignment_id: Optional[str] = None):
