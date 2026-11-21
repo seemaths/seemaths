@@ -44,5 +44,6 @@ body:has(.seemaths-opening) .seemaths-activity-bar{display:none!important}
 /* Use the homepage logo and wordmark without the old activity title. */
 @media screen {
   #app .seemaths-standard-branding .paper-brand>h1{display:none!important}
-  #app .seemaths-standard-branding .paper-brand-icon{border:0;background:transparent}
+  #app .seemaths-standard-branding .paper-home-link{font-size:28px}
+  #app .seemaths-standard-branding .paper-brand-icon{width:28px;height:21.875px;border:0;background:transparent}
 }
