@@ -41,7 +41,7 @@ export default {
     const arcadeHost = incoming.hostname === ARCADE_HOST;
     const playerHost = incoming.hostname === PLAYER_HOST;
     if ((arcadeHost || playerHost) && (publicPath === '/' || /^\/[0-9]{4}\/?$/.test(publicPath))) {
-      const shell = new URL('/exercise-player.html', incoming);
+      const shell = new URL('/exercise-player', incoming);
       const response = await env.ASSETS.fetch(new Request(shell, request));
       const headers = new Headers(response.headers);
       headers.set('Cache-Control', 'no-store');

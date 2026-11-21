@@ -43,7 +43,7 @@ test('static Math Space and Arcade roots read their deployed assets',async()=>{
     await worker.fetch(new Request('https://mathspace.seemaths.org/'),env);
     await worker.fetch(new Request('https://arcade.seemaths.org/'),env);
   });
-  assert.deepEqual(calls.map(request=>new URL(request.url).pathname),['/mathspace-player/','/exercise-player.html']);
+  assert.deepEqual(calls.map(request=>new URL(request.url).pathname),['/mathspace-player/','/exercise-player']);
 });
 
 test('static Math Space preserves root-relative PWA scope',async()=>{
@@ -91,7 +91,7 @@ test('Arcade and Standard PIN routes serve the local entry shell without upstrea
       assert.equal(response.headers.get('Cache-Control'),'no-store');
     }
   });
-  assert.deepEqual(calls.map(request=>new URL(request.url).pathname),Array(4).fill('/exercise-player.html'));
+  assert.deepEqual(calls.map(request=>new URL(request.url).pathname),Array(4).fill('/exercise-player'));
 });
 
 async function withFetch(mock, action) {
