@@ -2,6 +2,31 @@ import {applyPlayerTheme} from './player-theme.js';
 import { prepareStudent, watchProgress } from './student-session.js?v=16';
 import { downloadActivity } from './offline-downloads.js?v=4';
 
+// Apply the See Maths header to every render, including restored attempts.
+function installStandardHeading() {
+  const root = document.querySelector('#app');
+  function update() {
+    const heading = root.querySelector('.paper-heading-with-layout');
+    const home = heading?.querySelector('.paper-home-link');
+    if (!home || heading.dataset.seemathsBrand === 'home') return;
+    heading.classList.add('seemaths-standard-branding');
+    home.href = 'https://seemaths.org/'; home.title = 'See Maths home';
+    home.setAttribute('aria-label', 'See Maths home');
+    const logo = home.querySelector('.paper-brand-icon');
+    if (logo) {logo.src = '/seemaths-logo.svg'; logo.alt = '';}
+    if (!home.querySelector('.seemaths-wordmark')) {
+      const wordmark = document.createElement('span');
+      wordmark.className = 'seemaths-wordmark'; wordmark.textContent = 'See Maths'; home.append(wordmark);
+    }
+    const title = heading.querySelector('.paper-brand > h1');
+    if (title) title.hidden = true;
+    heading.dataset.seemathsBrand = 'home';
+  }
+  const observer = new MutationObserver(update);
+  observer.observe(root, {childList:true,subtree:true}); update();
+  window.addEventListener('pagehide', () => observer.disconnect(), {once:true});
+}
+
 // Resolve the participant before the player creates/restores its browser attempt.
 // A temporary reporting outage must never stop the child opening their maths.
 async function start() {
@@ -26,6 +51,7 @@ if ((student?.recipe?.player || new URLSearchParams(location.search).get('player
   const {startArcade} = await import('/assignment-arcade/bootstrap.js');
   await startArcade(student);
 } else {
+  installStandardHeading();
   const {readRecipe} = await import('/runtime/seemaths-player.js');
   watchProgress(student);
   const {planActivity} = await import('/runtime/activity-generation.mjs');
