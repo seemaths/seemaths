@@ -165,6 +165,7 @@ export function downloadActivity({readRecipe, planActivity}) {
       if (generation === currentGeneration) {
         state.activityOffline = navigator.onLine ? 'paused' : 'offline';
         panel.dataset.error = error.message;
+        panel.dataset.missing = JSON.stringify(error.missing || []);
         console.warn('[See Maths offline downloads]', error.message, error.missing || []);
         update(true);
       }
