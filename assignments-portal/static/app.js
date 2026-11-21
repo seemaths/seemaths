@@ -215,7 +215,7 @@ async function home() {
         const term=searchTerm(input.value);
         const matches=savedAssignments().filter(a=>[a.id,a.reference,topicLabel(a.recipe.topic)].some(value=>String(value).toLowerCase().replaceAll('-','').includes(term)));
         rows=matches.slice(offset,offset+25);
-      } else rows=(await api(`/api/assignments?q=${encodeURIComponent(input.value)}&offset=${offset}`)).assignments;
+      } else rows=(await api(`/api/assignments?q=${encodeURIComponent(searchTerm(input.value))}&offset=${offset}`)).assignments;
       if(version!==requestVersion) return;
       target.innerHTML=rows.length?rows.map(a=>listItem(a)).join(''):'<p class="muted">No active assignments found.</p>';
       document.querySelector('#pagination').innerHTML=`${offset?'<button class="secondary" id="previous-page">Previous</button>':''}${rows.length===25?'<button class="secondary" id="next-page">More assignments</button>':''}`;
