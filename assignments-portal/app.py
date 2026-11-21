@@ -162,8 +162,9 @@ def create_app(database_url=None, now=None, rate_secret=None):
         # Deliberately ignore untrusted X-Forwarded-For. Configure trusted proxies at the server.
         return request.client.host if request.client else 'unknown'
 
-    def assignment(tx, assignment_id, lock=False):
-        row = tx.execute('SELECT * FROM assignments WHERE id=?' + (' FOR UPDATE' if lock and db.postgres else ''), (str(assignment_id),)).fetchone()
+    def assignment(tx, assignment_id, lock=False, count_students=False):
+        selection='assignments.*,(SELECT COUNT(*) FROM participants WHERE assignment_id=assignments.id) AS student_count' if count_students else '*'
+        row = tx.execute('SELECT '+selection+' FROM assignments WHERE id=?' + (' FOR UPDATE' if lock and db.postgres else ''), (str(assignment_id),)).fetchone()
         if row is None:
             raise HTTPException(404, 'Assignment not found or expired.')
         if row['expires_at'] <= current_time():
@@ -178,7 +179,8 @@ def create_app(database_url=None, now=None, rate_secret=None):
 
     def public(row):
         return dict(id=row['id'], reference=row['reference'], recipe=json.loads(row['recipe']),
-                    createdAt=row['created_at'], expiresAt=row['expires_at'], closed=bool(row['closed']))
+                    createdAt=row['created_at'], expiresAt=row['expires_at'], closed=bool(row['closed']),
+                    studentCount=int(row['student_count']) if 'student_count' in row.keys() else 0)
 
     def participant(row):
         answers = json.loads(row['answers'])
@@ -263,7 +265,7 @@ def create_app(database_url=None, now=None, rate_secret=None):
                 raise HTTPException(422, 'Invalid assignment IDs.')
             with db.connect() as tx:
                 rate(tx, 'search:'+peer(request), 90, 60)
-                rows=tx.execute('SELECT * FROM assignments WHERE expires_at>? AND id IN ('+','.join('?' for _ in identifiers)+')', (current_time(),*identifiers)).fetchall()
+                rows=tx.execute('SELECT assignments.*,(SELECT COUNT(*) FROM participants WHERE assignment_id=assignments.id) AS student_count FROM assignments WHERE expires_at>? AND id IN ('+','.join('?' for _ in identifiers)+')', (current_time(),*identifiers)).fetchall()
             return {'assignments':[public(row) for row in rows]}
         query = q.strip()
         if query.startswith(('http://', 'https://', '/')):
@@ -276,7 +278,7 @@ def create_app(database_url=None, now=None, rate_secret=None):
         term = query.lower().replace('-', '')
         with db.connect() as tx:
             rate(tx, 'search:'+peer(request), 90, 60)
-            rows = tx.execute('SELECT * FROM assignments WHERE expires_at>? AND '
+            rows = tx.execute('SELECT assignments.*,(SELECT COUNT(*) FROM participants WHERE assignment_id=assignments.id) AS student_count FROM assignments WHERE expires_at>? AND '
                 '(id=? OR reference LIKE ? OR recipe LIKE ?) ORDER BY created_at DESC,id LIMIT 25 OFFSET ?',
                 (current_time(), identifier, '%'+term+'%', '%"topic":"'+term+'%', offset)).fetchall()
         return {'assignments': [public(r) for r in rows]}
@@ -285,7 +287,7 @@ def create_app(database_url=None, now=None, rate_secret=None):
     def get_assignment(assignment_id: UUID, request: Request):
         with db.connect() as tx:
             rate(tx, 'read:'+peer(request), 180, 60)
-            return public(assignment(tx, assignment_id))
+            return public(assignment(tx, assignment_id,count_students=True))
 
     @app.post('/api/assignments/{assignment_id}/join')
     def join(assignment_id: UUID, body: Join, request: Request):
@@ -339,10 +341,18 @@ def create_app(database_url=None, now=None, rate_secret=None):
                 raise HTTPException(422, 'Progress contains invalid question numbers.')
             if student['attempt_id'] and body.attemptId and str(body.attemptId) != student['attempt_id'] and not student['completed_at']:
                 raise HTTPException(409, 'This student number already has a saved activity. Continue in the original browser, or start as another student.')
+            # A second tab's stale snapshot cannot erase already recorded outcomes.
+            outcomes={a['index']:a for a in json.loads(student['answers'])}
+            for incoming in body.answers:
+                answer=incoming.model_dump()
+                old=outcomes.get(answer['index'],{})
+                correct=True if old.get('correct') is True or answer['correct'] is True else False if old.get('correct') is False or answer['correct'] is False else None
+                outcomes[answer['index']]={'index':answer['index'],'correct':correct,'checks':max(old.get('checks',0),answer['checks']),'helped':bool(old.get('helped') or answer['helped']),'skipped':False if correct is True else bool(old.get('skipped') or answer['skipped'])}
+            answers=[outcomes[index] for index in sorted(outcomes)]
             # A conditional UPDATE also protects against simultaneous requests on PostgreSQL.
             tx.execute('UPDATE participants SET answers=?,revision=?,updated_at=?,completed_at=?,attempt_id=?,active_seconds=CASE WHEN active_seconds>? THEN active_seconds ELSE ? END '
                        'WHERE id=? AND revision<? AND completed_at IS NULL',
-                       (json.dumps([a.model_dump() for a in body.answers], separators=(',', ':')), body.revision,
+                       (json.dumps(answers, separators=(',', ':')), body.revision,
                         current_time(), current_time() if body.completed else None,
                         str(body.attemptId) if body.attemptId else student['attempt_id'], body.activeSeconds, body.activeSeconds, student['id'], body.revision))
             return participant(tx.execute('SELECT * FROM participants WHERE id=?', (student['id'],)).fetchone())
@@ -353,7 +363,7 @@ def create_app(database_url=None, now=None, rate_secret=None):
             rate(tx, 'manage:'+peer(request), 120, 60)
             row = assignment(tx, assignment_id)
             students = tx.execute('SELECT * FROM participants WHERE assignment_id=? ORDER BY number', (str(assignment_id),)).fetchall()
-            return {**public(row), 'students': [participant(s) for s in students]}
+            return {**public(row), 'studentCount':len(students), 'students': [participant(s) for s in students]}
 
     @app.patch('/api/assignments/{assignment_id}/manage')
     def close(assignment_id: UUID, body: Closing, request: Request):

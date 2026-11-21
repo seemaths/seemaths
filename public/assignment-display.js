@@ -6,6 +6,6 @@ export function assignmentDateLabel(createdAt, expiresAt, now = new Date()) {
   const date=created.toLocaleDateString('en-AU',{day:'numeric',month:'short'});
   const calendarDay=value=>Date.UTC(value.getFullYear(),value.getMonth(),value.getDate());
   const days=Math.max(0,Math.round((calendarDay(expires)-calendarDay(now))/86400000));
-  const expiry=expires<=now?'expired':days===0?'expires today':`expires in ${days} ${days===1?'day':'days'}`;
-  return `${time} ${date} (${expiry})`;
+  const expiry=expires<=now?'expired':`exp ${days}d`;
+  return `${time}, ${date} (${expiry})`;
 }

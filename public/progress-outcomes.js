@@ -13,3 +13,14 @@ export function questionOutcomes(attempt, tracking = {}) {
       : null;
   }).filter(Boolean);
 }
+
+// Tabs share one participant: a stale empty snapshot must not erase an outcome.
+export function mergeQuestionOutcomes(previous=[],current=[]) {
+  const answers=new Map();
+  for(const answer of [...previous,...current]){
+    const before=answers.get(answer.index);
+    const correct=before?.correct===true || answer.correct===true ? true : before?.correct===false || answer.correct===false ? false : null;
+    answers.set(answer.index,{index:answer.index,correct,checks:Math.max(before?.checks || 0,answer.checks || 0),helped:Boolean(before?.helped || answer.helped),skipped:correct===true ? false : Boolean(before?.skipped || answer.skipped)});
+  }
+  return [...answers.values()].sort((a,b)=>a.index-b.index);
+}

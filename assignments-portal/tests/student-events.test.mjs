@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFile} from 'node:fs/promises';
-import {questionOutcomes} from '../../public/progress-outcomes.js';
+import {questionOutcomes,mergeQuestionOutcomes} from '../../public/progress-outcomes.js';
 
 test('student saves on local question events, never on an idle timer or unchanged local save',async()=>{
   const events=new Map(), documentEvents=new Map(), writes=[];
@@ -17,7 +17,7 @@ test('student saves on local question events, never on an idle timer or unchange
     window:{addEventListener:(n,f)=>events.set(n,f),removeEventListener(){}},
     setInterval:()=>{throw new Error('Polling is forbidden');},
     setTimeout:()=>{throw new Error('Timed syncing is forbidden');},clearTimeout(){},queueMicrotask,
-    getAttempt:async()=>{reads++;return attempt;},questionOutcomes,
+    getAttempt:async()=>{reads++;return attempt;},questionOutcomes,mergeQuestionOutcomes,nextStudentRevision:async(id,key,floor)=>floor+1,
     fetch:async(_,options)=>{writes.push(JSON.parse(options.body));return {ok:true,json:async()=>({updatedAt:1,activeSeconds:writes.at(-1).activeSeconds})};}
   });
   const source=(await readFile(new URL('../../public/student-session.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').replaceAll('export function','function').replaceAll('export async function','async function');

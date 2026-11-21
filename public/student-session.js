@@ -1,5 +1,6 @@
+import {sharedStudentIdentity,bindStudentAttempt,ensureStudentAttempt,nextStudentRevision} from './student-identity.js?v=1';
 import { getAttempt } from '/runtime/seemaths-attempts.js';
-import { questionOutcomes } from './progress-outcomes.js?v=1';
+import { questionOutcomes, mergeQuestionOutcomes } from './progress-outcomes.js?v=2';
 
 const parameters = new URLSearchParams(location.search);
 const prefix = 'seemaths.assignments.student.v1.';
@@ -12,8 +13,25 @@ function notice(text) {
   message.textContent = text; message.hidden = false;
   clearTimeout(messageTimer); messageTimer = setTimeout(() => message.hidden = true, 4500);
 }
-function read(id) { try { return JSON.parse(sessionStorage.getItem(prefix + id) || localStorage.getItem(prefix + id)); } catch { return null; } }
-function save(session) { try { const value=JSON.stringify(session);localStorage.setItem(prefix + session.assignmentId, value);sessionStorage.setItem(prefix + session.assignmentId,value);return true; } catch { return false; } }
+function read(id) { try { return JSON.parse(localStorage.getItem(prefix + id) || sessionStorage.getItem(prefix + id)); } catch { return null; } }
+function save(session) {
+  try {
+    const previous=JSON.parse(localStorage.getItem(prefix+session.assignmentId) || 'null');
+    if(previous?.key===session.key){
+      const tracking=session.tracking ||= {};
+      for(const [index,old] of Object.entries(previous.tracking || {})){
+        const detail=tracking[index] ||= {};
+        detail.checks=Math.max(detail.checks || 0,old.checks || 0);
+        detail.helped=Boolean(detail.helped || old.helped);detail.skipped=Boolean(detail.skipped || old.skipped);
+      }
+      session.answers=mergeQuestionOutcomes(previous.answers || previous.pending?.answers,session.answers || session.pending?.answers);
+      session.trackedSeconds=Math.max(session.trackedSeconds || 0,previous.trackedSeconds || 0);
+      session.activeSeconds=Math.max(session.activeSeconds || 0,previous.activeSeconds || 0);
+    }
+    const value=JSON.stringify(session);localStorage.setItem(prefix+session.assignmentId,value);sessionStorage.setItem(prefix+session.assignmentId,value);return true;
+  } catch { return false; }
+}
+
 async function request(path, {method = 'GET', body, key} = {}) {
   const response = await fetch(path, {method, keepalive:method==='PUT', cache:'no-store', signal:AbortSignal.timeout(12000), headers:{...(body ? {'Content-Type':'application/json'} : {}),...(key ? {Authorization:`Bearer ${key}`} : {})}, ...(body ? {body:JSON.stringify(body)} : {})});
   const value = await response.json();
@@ -58,20 +76,23 @@ export async function prepareStudent() {
     url.searchParams.delete('teacher');
     session = read(assignmentId);
     const fragment = new URLSearchParams(location.hash.slice(1));
+    let restoring=false;
     if (uuid.test(fragment.get('student') || '') && /^[A-Za-z0-9_-]{43,86}$/.test(fragment.get('key') || '')) {
       const restored = await request(`/api/assignments/${assignmentId}/students/${fragment.get('student')}`, {key:fragment.get('key')});
       session = {...restored, key:fragment.get('key'), assignmentId};
-      url.hash = '';
+      url.hash = '';restoring=true;
     }
-    if (!session?.key) {
-      const key = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','');
-      session = {assignmentId, key};
-      if (!save(session)) throw new Error('Enable browser storage to keep your Student Id.');
-    }
+    const identity=await sharedStudentIdentity(assignmentId,{key:session?.key,attemptId:session?.attemptId || session?.sharedAttemptId,expiresAt:assignment.expiresAt,replace:restoring});
+    if(session?.key!==identity.key) session={assignmentId,key:identity.key};
+    session={...session,assignmentId,key:identity.key};
+    if(!save(session)) throw new Error('Enable browser storage to keep your Student Id.');
     const joined = await request(`/api/assignments/${assignmentId}/join`, {method:'POST',body:{credential:session.key}});
     session = {...session,...joined,assignmentId,expiresAt:assignment.expiresAt};
-    // Prefer the original local attempt even when reopening the clean shared link.
-    if (joined.attemptId && await getAttempt(joined.attemptId)) url.searchParams.set('attempt', joined.attemptId);
+    // Reserve one local attempt before either tab starts generating questions.
+    session.sharedAttemptId=joined.attemptId || identity.attemptId;
+    await bindStudentAttempt(assignmentId,session.key,session.sharedAttemptId);
+    if(assignment.recipe.player!=='arcade') await ensureStudentAttempt(session.sharedAttemptId,assignment.recipe);
+    url.searchParams.set('attempt',session.sharedAttemptId);
     history.replaceState(null,'',url);
     if (!save(session)) notice('Keep this browser open: your Student Id could not be saved.');
     installBadge(session);
@@ -135,18 +156,19 @@ export function watchProgress(session) {
       const attempt=attemptId && await getAttempt(attemptId);
       if(attempt) {
         lastAttempt=attempt;
-        const answers=questionOutcomes(attempt,tracking);
+        let answers=mergeQuestionOutcomes(read(session.assignmentId)?.answers,questionOutcomes(attempt,tracking));
         const completed=Boolean(attempt.result) || (attempt.recipe.mode==='practice' && answers.length===attempt.recipe.count && answers.every(a => a.correct===true || a.skipped));
         const snapshot={answers,completed,attemptId:attempt.id,activeSeconds:Math.min(604800,Math.floor(activeSeconds))};
         const next=JSON.stringify({answers,completed,attemptId:attempt.id});
         if((next!==signature || forceTime) && !session.completedAt) {
-          signature=next;session.revision=Math.max(session.revision || 0,session.pending?.revision || 0)+1;
-          session.pending={...snapshot,revision:session.revision};save(session);
+          session.revision=await nextStudentRevision(session.assignmentId,session.key,Math.max(session.revision || 0,session.pending?.revision || 0),{expiresAt:session.expiresAt,attemptId:attempt.id});signature=next;
+          answers=mergeQuestionOutcomes(read(session.assignmentId)?.answers,answers);
+          session.answers=answers;session.pending={...snapshot,answers,revision:session.revision};save(session);
         }
       }
       if(session.pending && navigator.onLine) {
         const result=await request(`/api/assignments/${session.assignmentId}/students/${session.id}`,{method:'PUT',key:session.key,body:session.pending});
-        session.pending=null;session.updatedAt=result.updatedAt;session.completedAt=result.completedAt;session.activeSeconds=result.activeSeconds;save(session);
+        session.pending=null;session.answers=mergeQuestionOutcomes(session.answers,result.answers);session.revision=Math.max(session.revision || 0,result.revision || 0);session.updatedAt=result.updatedAt;session.completedAt=result.completedAt;session.activeSeconds=result.activeSeconds;save(session);
       }
     } catch(error) {
       if([403,404,409,410].includes(error.status)){stopped=true;notice(error.message);}

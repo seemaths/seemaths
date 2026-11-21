@@ -159,3 +159,7 @@ is separate from deploying this application and connecting the live player.
 The assignment UUID identifies each progress dashboard. `/assignments` lists active assignments and accepts an assignment link, UUID, numeric reference or topic. A My Assignments filter appears only when this browser has saved created assignments. No teacher identity is stored. Viewing progress is public by assignment ID; editing and deleting still require the creator’s private management key.
 
 Student progress is sent on local question-save events, Help Me, navigation, and leaving the activity. There is no timer-based sync or realtime subscription. Identical question snapshots are suppressed; elapsed time is included with events. Offline pending snapshots retry when connectivity returns or on the next activity event.
+
+The assignment-list student count is the number of allocated participant IDs, including participants with no answers and completed attempts. It is fetched only on page load, search/filter actions or the circular reload button. No polling or realtime subscriptions are used.
+
+Tabs on the same origin and browser profile reserve a shared participant credential and activity ID through atomic IndexedDB transactions. Local revision allocation and merged progress snapshots protect against stale-tab overwrites. Different devices, browser profiles or private windows remain separate participants; two children sharing one browser profile share an ID for that assignment. No personal identity is inferred.
