@@ -149,6 +149,32 @@
   const selectedTopics = new Set();
   const subjectOrder = ['algebra','arithmetic','geometry','measurement','number','statistics'];
   let mode = null;
+  const sharedAssignments = new Map();
+  function updateCopyLabel() {
+    const assignment = topic && mode ? sharedAssignments.get(activityUrl()) : null;
+    $('copy-link-label').textContent = assignment ? `Exercise ${assignment.reference}` : 'Create Exercise';
+    updateSharing(assignment);
+  }
+  let sharedURL = '', sharedTitle = '';
+  function updateSharing(assignment) {
+    sharedURL = assignment?.studentURL || '';
+    sharedTitle = assignment ? `See Maths · Exercise ${assignment.reference}` : '';
+    $('exercise-share').hidden = !sharedURL;
+    $('share-feedback').textContent = '';
+    $('share-copy').textContent = 'Copy';
+    document.querySelector('.exercise-share-more').open = false;
+    if (!sharedURL) return;
+    const display = new URL(sharedURL);
+    $('exercise-share-url').href = sharedURL;
+    $('exercise-share-url').textContent = display.host + display.pathname;
+    $('share-native').hidden = typeof navigator.share !== 'function';
+    const message = `${sharedTitle}\n${sharedURL}`;
+    $('share-whatsapp').href = 'https://wa.me/?' + new URLSearchParams({text:message});
+    $('share-email').href = 'mailto:?' + new URLSearchParams({subject:sharedTitle,body:message}).toString().replaceAll('+','%20');
+    $('share-gmail').href = 'https://mail.google.com/mail/?' + new URLSearchParams({view:'cm',fs:'1',su:sharedTitle,body:message});
+    $('share-facebook').href = 'https://www.facebook.com/sharer/sharer.php?' + new URLSearchParams({u:sharedURL});
+    $('share-linkedin').href = 'https://www.linkedin.com/sharing/share-offsite/?' + new URLSearchParams({url:sharedURL});
+  }
   // This identifies the shared question blueprint, never a student's generated values.
   const random = new Uint32Array(2);
   if (globalThis.crypto?.getRandomValues) crypto.getRandomValues(random);
@@ -172,6 +198,8 @@
     }
     $('open-activity').disabled = true;
     $('copy-link').disabled = true;
+    $('copy-link-label').textContent = 'Create Exercise';
+    updateSharing(null);
     $('open-activity-label').textContent = 'Self Study';
     $('activity-link').value = '';
     $('activity-summary').textContent = '';
@@ -267,6 +295,7 @@
   }
   function update() {
     $('copy-feedback').hidden = true;
+    updateCopyLabel();
     if (!topic || !mode) return;
     $('duration-setting').hidden = mode !== 'exam';
     $('player-setting').hidden = mode !== 'practice';
@@ -332,7 +361,6 @@
   $('exam-minutes').addEventListener('change', () => followSelection($('exam-minutes'), document.querySelector('.actions')));
   document.querySelectorAll('[data-minutes]').forEach(button => button.addEventListener('click', () => { $('exam-minutes').value = button.dataset.minutes; update(); followSelection(button, document.querySelector('.actions')); }));
   $('activity-link').addEventListener('click', event => event.target.select());
-  const sharedAssignments = new Map();
   async function assignmentLink() {
     const exercise = activityUrl();
     if (!['practice', 'exam'].includes(mode)) return exercise;
@@ -355,9 +383,27 @@
       localStorage.setItem(storageKey, JSON.stringify([{id:data.id,key:data.managementToken,reference:data.reference,recipe:data.recipe,createdAt:data.createdAt,expiresAt:data.expiresAt}, ...existing.filter(a => a.id !== data.id)]));
       sharedAssignments.set(exercise, assignment);
     }
-    const {studentAssignmentURL}=await import('/assignment-links.js?v=1');
-    return studentAssignmentURL(assignment);
+    const {studentAssignmentURL}=await import('/assignment-links.js?v=2');
+    assignment.studentURL = studentAssignmentURL(assignment);
+    updateCopyLabel();
+    return assignment.studentURL;
   }
+  $('share-copy').addEventListener('click', async () => {
+    if (!sharedURL) return;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+      await navigator.clipboard.writeText(sharedURL);
+      $('share-copy').textContent = 'Copied'; $('share-feedback').textContent = 'Link copied';
+    } catch {
+      $('activity-link').value = sharedURL; $('activity-link').hidden = false;
+      $('activity-link').focus(); $('activity-link').select(); $('status').textContent = 'Copy the selected link.';
+    }
+  });
+  $('share-native').addEventListener('click', async () => {
+    if (!sharedURL || !navigator.share) return;
+    try {await navigator.share({title:sharedTitle,text:sharedTitle,url:sharedURL});}
+    catch (error) {if (error.name !== 'AbortError') $('status').textContent = 'Use Copy or choose another sharing option.';}
+  });
   $('copy-link').addEventListener('click', async () => {
     if (!validate(true)) return;
     const button = $('copy-link'); button.disabled = true;

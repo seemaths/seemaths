@@ -53,7 +53,7 @@ export async function buildQuodes(output) {
     }
     await exportRoute('/play/','play/index.html');
     let shell=await readFile(path.join(output,'play/index.html'),'utf8');
-    shell=shell.replace('/runtime/seemaths-player.js','/student-player.js?v=15')
+    shell=shell.replace('/runtime/seemaths-player.js','/student-player.js?v=16')
       .replace('</head>','<link rel="stylesheet" href="/student-session.css?v=4"></head>');
     await write('play/index.html',shell);
     let player = await readFile(path.join(output,'runtime/seemaths-player.js'),'utf8');

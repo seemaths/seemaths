@@ -8,7 +8,7 @@
   <meta property="og:title" content="See Maths">
   <meta property="og:url" content="https://seemaths.org/">
   <link rel="icon" href="/favicon.svg?v=division" type="image/svg+xml">
-  <link rel="stylesheet" href="/styles.css?v=assignment-library-7">
+  <link rel="stylesheet" href="/styles.css?v=exercise-sharing-1">
   <link rel="stylesheet" href="/runtime/page-layout.css">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=division">
@@ -17,8 +17,8 @@
   <script src="/pwa.js" defer></script>
   <title>See Maths</title>
   <link rel="stylesheet" href="/assignment-library.css?v=1">
-  <script src="/assignment-library.js?v=1" defer></script>
-  <script src="/script.js?v=assignment-links-10" defer></script>
+  <script src="/assignment-library.js?v=2" defer></script>
+  <script src="/script.js?v=exercise-links-13" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#activity">Skip to activity builder</a>
@@ -93,11 +93,28 @@
             <div class="range-labels" aria-hidden="true"><span>1</span><span>5</span></div>
           </fieldset>
         </div>
+        <div class="exercise-bottom-row">
         <fieldset class="player-setting" id="player-setting">
           <legend class="visually-hidden">Player</legend>
           <label><input type="radio" name="player" value="standard" checked><span>Standard</span></label>
           <label><input type="radio" name="player" value="arcade"><span>Arcade</span></label>
         </fieldset>
+        <section class="exercise-share" id="exercise-share" aria-label="Share exercise" hidden>
+          <a id="exercise-share-url" class="exercise-share-url" target="_blank" rel="noopener"></a>
+          <div class="exercise-share-actions">
+            <button type="button" id="share-copy">Copy</button>
+            <button type="button" id="share-native" hidden>Share</button>
+            <a id="share-whatsapp" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+            <a id="share-email">Email</a>
+            <details class="exercise-share-more"><summary>More</summary><div class="exercise-share-menu">
+              <a id="share-gmail" target="_blank" rel="noopener noreferrer">Gmail</a>
+              <a id="share-facebook" target="_blank" rel="noopener noreferrer">Facebook</a>
+              <a id="share-linkedin" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+            </div></details>
+          </div>
+          <span id="share-feedback" class="visually-hidden" role="status" aria-live="polite"></span>
+        </section>
+        </div>
         <fieldset class="duration-setting" id="duration-setting" hidden>
           <legend>Time</legend>
           <div class="duration-row">
@@ -118,7 +135,7 @@
         <p id="activity-summary" class="visually-hidden" aria-live="polite"></p>
         <div class="actions">
           <button class="primary-button" id="open-activity" type="submit"><span id="open-activity-label">Self Study</span></button>
-          <button class="copy-button" id="copy-link" type="button"><span>Create Exercise</span><span id="copy-feedback" class="copy-feedback" role="status" aria-live="polite" hidden>Copied</span></button>
+          <button class="copy-button" id="copy-link" type="button"><span id="copy-link-label">Create Exercise</span><span id="copy-feedback" class="copy-feedback" role="status" aria-live="polite" hidden>Copied</span></button>
         </div>
         <label class="visually-hidden" for="activity-link">Shareable activity link</label>
         <input id="activity-link" class="activity-link" type="text" readonly hidden spellcheck="false" aria-describedby="share-note">

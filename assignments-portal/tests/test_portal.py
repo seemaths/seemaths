@@ -293,3 +293,40 @@ def test_a_stale_tab_cannot_erase_shared_progress(portal):
     assert corrected['answers'][0]['skipped'] is False
     assert corrected['answers'][0]['correct'] is True
     assert corrected['answers'][1]['helped'] is True
+
+
+def test_exact_four_digit_pin_lookup(portal):
+    client, now, _ = portal
+    item = assignment(client)
+    assert len(item['reference']) == 4
+    result = client.get('/api/assignments/' + item['reference'])
+    assert result.status_code == 200
+    assert result.json()['id'] == item['id']
+    assert 'managementToken' not in result.json()
+    assert client.get('/api/assignments/123').status_code == 422
+    now[0] += WEEK + 1
+    assert client.get('/api/assignments/' + item['reference']).status_code == 410
+
+
+def test_unknown_pin_does_not_create_an_exercise(portal):
+    client, _, _ = portal
+    assert client.get('/api/assignments/0000').status_code == 404
+    assert client.get('/api/assignments').json()['assignments'] == []
+
+
+def test_official_player_origins_can_join_exercises(tmp_path, monkeypatch):
+    monkeypatch.setenv('PORTAL_ORIGIN', 'https://seemaths.org')
+    client = TestClient(create_app(str(tmp_path / 'origins.sqlite3')))
+    item = assignment(client)
+    for origin in ['https://player.seemaths.org', 'https://arcade.seemaths.org']:
+        response = client.post(f"/api/assignments/{item['id']}/join", json={'credential': secrets.token_urlsafe(32)}, headers={'Origin': origin})
+        assert response.status_code == 200
+    assert client.post(f"/api/assignments/{item['id']}/join", json={'credential': secrets.token_urlsafe(32)}, headers={'Origin': 'https://unrelated.example'}).status_code == 403
+
+
+def test_pin_lookup_preserves_leading_zeroes(portal):
+    client, _, database = portal
+    item = assignment(client)
+    with database.connect() as tx:
+        tx.execute('UPDATE assignments SET reference=? WHERE id=?', ('0012', item['id']))
+    assert client.get('/api/assignments/0012').json()['id'] == item['id']

@@ -1,6 +1,6 @@
 import {assignmentDateLabel} from '/assignment-display.js?v=2';
-import {studentAssignmentURL} from '/assignment-links.js?v=1';
-import '/assignment-library.js?v=1';
+import {studentAssignmentURL} from '/assignment-links.js?v=2';
+import '/assignment-library.js?v=2';
 const root = document.querySelector("#app");
 const reloadIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.75 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z"/></svg>';
 const topics = {
@@ -255,7 +255,7 @@ async function home() {
       document.querySelector('#pagination').innerHTML=`${offset?'<button class="secondary" id="previous-page">Previous</button>':''}${rows.length===25?'<button class="secondary" id="next-page">More exercises</button>':''}`;
       document.querySelector('#previous-page')?.addEventListener('click',()=>{offset-=25;search();});
       document.querySelector('#next-page')?.addEventListener('click',()=>{offset+=25;search();});
-    } catch(error){if(version!==requestVersion)return;target.innerHTML='<p class="muted">Could not load assignments. Use Search to try again.</p>';toast(error.message);}
+    } catch(error){if(version!==requestVersion)return;target.innerHTML='<p class="muted">Could not load exercises. Use Search to try again.</p>';toast(error.message);}
   }
   document.querySelector('#reload-assignments').onclick=async e=>{const button=e.currentTarget;button.disabled=true;try{await search();}finally{button.disabled=false;}};
   document.querySelector('#search-form').onsubmit=e=>{e.preventDefault();offset=0;search();};
@@ -345,7 +345,7 @@ async function dashboard(id) {
   document.querySelector("#delete-assignment").onclick = async () => {
     if (
       !(await confirmAction(
-        "Delete this assignment?",
+        "Delete this exercise?",
         "This permanently deletes the exercise and every student’s stored progress. Student links will stop working.",
       ))
     )

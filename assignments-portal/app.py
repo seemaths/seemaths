@@ -140,6 +140,8 @@ def create_app(database_url=None, now=None, rate_secret=None):
     database_url = database_url or os.getenv('DATABASE_URL') or str(ROOT / 'data/portal.sqlite3')
     origin = os.getenv('PORTAL_ORIGIN', 'http://127.0.0.1:4180').rstrip('/')
     allowed_origins = {origin, *[value.strip().rstrip('/') for value in os.getenv('PORTAL_ALLOWED_ORIGINS', '').split(',') if value.strip()]}
+    if origin == 'https://seemaths.org':
+        allowed_origins.update({'https://player.seemaths.org', 'https://arcade.seemaths.org'})
     player_origin = os.getenv('PLAYER_ORIGIN', 'https://seemaths.org').rstrip('/')
     secret = rate_secret or os.getenv('PORTAL_RATE_SECRET')
     cron_secret = os.getenv('PORTAL_CRON_SECRET', '')
@@ -152,7 +154,7 @@ def create_app(database_url=None, now=None, rate_secret=None):
     secret = secret or 'local-development-only-rate-secret'
     clock = now or time.time
     db = Database(database_url)
-    app = FastAPI(title='See Maths assignments', docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title='See Maths exercises', docs_url=None, redoc_url=None, openapi_url=None)
     app.state.database = db
 
     def current_time():

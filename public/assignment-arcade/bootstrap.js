@@ -1,6 +1,6 @@
 import {campaignFromRecipe, progressAttempt} from './campaign.js';
 import {putAttempt} from '/runtime/seemaths-attempts.js';
-import {watchProgress} from '/student-session.js?v=14';
+import {watchProgress} from '/student-session.js?v=16';
 
 function stylesheet(href) {
   return new Promise((resolve,reject)=>{
@@ -12,7 +12,7 @@ function stylesheet(href) {
 export async function startArcade(student) {
   const root=document.querySelector('#app');
   try {
-    if (!student?.recipe) throw new Error('Connect to the internet to open this Arcade assignment.');
+    if (!student?.recipe) throw new Error('Connect to the internet to open this Arcade exercise.');
     const campaign=campaignFromRecipe(student.recipe, `assignment-${student.assignmentId}`);
     const storageKey=`seemaths.arcade:${student.assignmentId}:${student.id}`;
     // Keep the existing Arcade artwork/runtime assets and its standalone game intact.
