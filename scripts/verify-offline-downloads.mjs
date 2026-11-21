@@ -46,9 +46,14 @@ try {
     assert.ok(Math.abs(progress.footer.top-progress.box.bottom-12)<2,'Bar must sit 12px above question strip');
     assert.ok(progress.box.right<= (mobile?390:1280)-16,'Bar must leave a right-hand gap');
     await page.screenshot({path:path.join(output,mobile?'phone-progress.png':'desktop-progress.png'),fullPage:true});
-    // Going offline must keep the unfinished bar visible and explain the pause.
+    assert.equal(await panel.locator('.seemaths-download-min').innerText(),'0');
+    assert.equal(await panel.locator('.seemaths-download-max').innerText(),'12');
+    assert.deepEqual((await panel.innerText()).trim().split(/\s+/),['0','12']);
+    assert.equal(await panel.evaluate(n=>getComputedStyle(n).boxShadow),'none');
+    // Going offline must keep the numeric progress indicator visible.
     await context.setOffline(true);
-    await page.waitForFunction(()=>document.querySelector('.seemaths-downloads').innerText.includes('Connect to finish'));
+    await page.waitForFunction(()=>document.querySelector('.seemaths-downloads progress').getAttribute('aria-valuetext').includes(', offline'));
+    assert.deepEqual((await panel.innerText()).trim().split(/\s+/),['0','12']);
     assert.equal(await panel.isVisible(),true);
     blocked=false;await context.setOffline(false);
     await page.waitForFunction(()=>document.documentElement.dataset.activityOffline==='ready',null,{timeout:60000});

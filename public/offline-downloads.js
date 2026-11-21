@@ -5,16 +5,18 @@ export function downloadActivity({readRecipe, planActivity}) {
   const panel = document.createElement('aside');
   panel.className = 'seemaths-downloads';
   panel.hidden = true;
-  const row = document.createElement('div');
-  const label = document.createElement('span');
-  label.textContent = 'Downloading questions…';
-  label.setAttribute('role', 'status');
-  label.setAttribute('aria-live', 'polite');
+  const row = document.createElement('div'); row.setAttribute('aria-hidden', 'true');
+  const minimum = document.createElement('span');
+  minimum.className = 'seemaths-download-min'; minimum.textContent = '0';
+  const maximum = document.createElement('span');
+  maximum.className = 'seemaths-download-max'; maximum.textContent = '0';
   const retry = document.createElement('button');
-  retry.type = 'button'; retry.textContent = 'Retry'; retry.hidden = true;
+  retry.type = 'button'; retry.hidden = true;
+  retry.setAttribute('aria-label', 'Retry downloads'); retry.title = 'Retry downloads';
+  retry.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 7a7 7 0 0 1 11.6-1L20 9M4 15l2.3 3A7 7 0 0 0 17.9 17"/></svg>';
   const bar = document.createElement('progress');
-  bar.setAttribute('aria-label', 'Question downloads');
-  row.append(label, retry); panel.append(row, bar);
+  bar.setAttribute('aria-label', 'Question code downloads');
+  row.append(minimum, maximum); panel.append(row, bar, retry);
   document.body.append(panel);
   let total = 0, finished = new Set(), running = false, complete = false, stopped = false;
   let ids, roots, observedFooter, resize, show, started = false, generation = 0, workerUpgrades = 0;
@@ -30,9 +32,8 @@ export function downloadActivity({readRecipe, planActivity}) {
     }
   }
   function update(failed = false) {
-    const count = `${finished.size}/${total}`;
-    label.textContent = !navigator.onLine ? `Connect to finish · ${count}`
-      : failed ? `Download paused · ${count}` : `Downloading ${count}`;
+    maximum.textContent = String(total);
+    bar.setAttribute('aria-valuetext', `${finished.size} of ${total} question codes downloaded${!navigator.onLine ? ', offline' : failed ? ', paused' : ''}`);
     bar.max = Math.max(1, total); bar.value = finished.size;
     retry.hidden = !failed || !navigator.onLine;
     panel.dataset.completed = String(finished.size); panel.dataset.total = String(total);
@@ -84,7 +85,7 @@ export function downloadActivity({readRecipe, planActivity}) {
   async function upgradeWorker() {
     const registration = await offlineRegistration();
     const previous = navigator.serviceWorker.controller;
-    state.activityOffline = 'updating'; label.textContent = 'Updating downloads…';
+    state.activityOffline = 'updating'; bar.setAttribute('aria-valuetext', 'Updating offline files');
     return new Promise((resolve, reject) => {
       let settled = false, installing;
       const activate = () => registration.waiting?.postMessage({type:'activate-offline-update'});
