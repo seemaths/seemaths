@@ -8,6 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "verify:routing": "node scripts/verify-asset-routing.mjs",
     "verify:execution": "node scripts/verify-local-execution.mjs",
     "verify:players": "node scripts/verify-static-players.mjs",
     "verify:downloads": "node scripts/verify-offline-downloads.mjs",
