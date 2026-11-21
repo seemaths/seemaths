@@ -276,3 +276,17 @@ test('player favicon fallback serves the See Maths SVG for offline downloads',as
   assert.equal(response.status,200);
   assert.equal(new URL(calls[0].url).pathname,'/favicon.svg');
 });
+
+
+test('Worker responses identify routed requests without changing private API cache policy', async()=>{
+  const {env}=assets();
+  const shell=await worker.fetch(new Request('https://player.seemaths.org/0012'),env);
+  assert.equal(shell.headers.get('X-SeeMaths-Routing'),'worker');
+  assert.equal(shell.headers.get('Cache-Control'),'no-store');
+  env.ASSIGNMENTS_ORIGIN='https://portal.example';
+  await withFetch(async()=>Response.json({id:'example'}),async()=>{
+    const api=await worker.fetch(new Request('https://seemaths.org/api/assignments/example'),env);
+    assert.equal(api.headers.get('X-SeeMaths-Routing'),'worker');
+    assert.equal(api.headers.get('Cache-Control'),'no-store');
+  });
+});

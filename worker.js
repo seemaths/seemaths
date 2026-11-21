@@ -30,8 +30,7 @@ function mathspaceRootPath(pathname) {
   })[pathname] || pathname;
 }
 
-export default {
-  async fetch(request, env) {
+async function handleRequest(request, env) {
     const incoming = new URL(request.url);
     const publicPath = incoming.pathname;
     if (LEGACY_HOSTS.has(incoming.hostname)) {
@@ -161,5 +160,14 @@ export default {
       responseHeaders.set('Service-Worker-Allowed', '/');
     }
     return new Response(body, {status: response.status, statusText: response.statusText, headers: responseHeaders});
+}
+
+export default {
+  async fetch(request, env) {
+    const response = await handleRequest(request, env);
+    const result = new Response(response.body, response);
+    // Direct static-asset responses bypass this code and do not carry this header.
+    result.headers.set('X-SeeMaths-Routing', 'worker');
+    return result;
   },
 };

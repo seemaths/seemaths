@@ -173,6 +173,20 @@ duration. It records no answers or student details and is disabled by default.
 
 ## Deploy
 
+Static JS, CSS, images, fonts, generator data, catalogues and already-built HTML
+use Cloudflare's asset-first delivery without invoking the routing Worker.
+Worker-first paths are limited to custom-domain roots/manifests, favicon/service
+worker aliases, exercise APIs and dashboard aliases. Missing paths, including
+four-digit PIN links, reach the Worker; `assets_navigation_has_no_effect` keeps
+browser navigation to those links working. Direct asset responses do not carry
+`X-SeeMaths-Routing`; Worker responses carry `X-SeeMaths-Routing: worker`.
+Run `npm run verify:routing` against Wrangler on port 8803 with
+`--infer-origin-from-routes false` to verify multiple hostnames through the real
+asset router. Set `PROOF_ORIGIN=https://seemaths.org` to check production.
+
+Exercise/progress APIs remain uncached. This removes static-file Worker usage,
+while routed page requests and exercise/progress services retain their limits.
+
 `wrangler.jsonc` identifies the existing `seemaths-home` Worker and its custom
 domains. An authorized maintainer can deploy with `npm run deploy` after tests.
 This uses the current Cloudflare account; contributors deploy their own copy by
