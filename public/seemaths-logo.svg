@@ -1,0 +1,12 @@
+<svg viewBox="220 140 420 320" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">  <g transform="rotate(-12 430 300)">
+    <path d="M260 200 Q340 160 420 200" fill="none" stroke="#5E667A" stroke-width="14" stroke-linecap="round"/>
+    <path d="M440 200 Q520 160 600 200" fill="none" stroke="#5E667A" stroke-width="14" stroke-linecap="round"/>
+    <ellipse cx="360" cy="320" rx="90" ry="110" fill="#FFFFFF" stroke="#1b2b4b" stroke-width="10"/>
+    <ellipse cx="390" cy="350" rx="42" ry="50" fill="#3DB5F2"/>
+    <circle cx="405" cy="360" r="26" fill="#000000"/>
+    <circle cx="390" cy="330" r="10" fill="#FFFFFF"/>
+    <ellipse cx="520" cy="320" rx="78" ry="96" fill="#FFFFFF" stroke="#1b2b4b" stroke-width="10"/>
+    <ellipse cx="545" cy="350" rx="36" ry="44" fill="#3DB5F2"/>
+    <circle cx="558" cy="358" r="22" fill="#000000"/>
+    <circle cx="545" cy="332" r="8" fill="#FFFFFF"/>
+  </g></svg>

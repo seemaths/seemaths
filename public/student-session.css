@@ -40,3 +40,11 @@ body:has(.seemaths-opening) .seemaths-activity-bar{display:none!important}
   #app .paper-footer button:focus-visible{outline-color:var(--player-current,#f2c879)}
   #app .paper-footer .paper-dots{scrollbar-color:var(--player-border,#56647c) transparent}
 }
+
+@font-face{font-family:SeeMathsBrand;src:url('/nunito-brand.ttf') format('truetype');font-display:swap}
+@media screen {
+  #app .paper-heading-with-layout .paper-home-link{display:inline-flex;align-items:center;gap:10px;text-decoration:none}
+  #app .paper-heading-with-layout .paper-home-link .paper-brand-icon{width:44px;height:36px;border-radius:0;object-fit:contain}
+  #app .seemaths-wordmark{font:900 27px/1.2 SeeMathsBrand,Nunito,system-ui,sans-serif;letter-spacing:-.025em;color:inherit}
+}
+@media(max-width:650px){#app .seemaths-wordmark{font-size:23px}#app .paper-heading-with-layout .paper-home-link .paper-brand-icon{width:36px;height:30px}}

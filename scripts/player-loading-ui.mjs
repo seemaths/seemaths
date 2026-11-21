@@ -18,6 +18,8 @@ export async function applyPlayerLoadingUI(output) {
     ['import { fetchExercise }', imports + 'import { fetchExercise }'],
     ["const message = node('p', 'paper-question-pending-message', 'Preparing this question…');\n    message.setAttribute('role', 'status');",
       "const message = createLoadingProgress('Loading question');\n    message.classList.add('paper-question-pending-message');"],
+    ["    brand.append(homeLink, titleNode); heading.prepend(brand);",
+      "    if (branding.name === 'See Maths') {\n      homeLink.href = 'https://seemaths.org/';\n      homeLink.setAttribute('aria-label', 'See Maths home'); homeLink.title = 'See Maths home';\n      logo.src = '/seemaths-logo.svg';\n      homeLink.append(node('span', 'seemaths-wordmark', 'See Maths'));\n      titleNode.hidden = true;\n    }\n    brand.append(homeLink, titleNode); heading.prepend(brand);"],
     ["state.card.removeAttribute('aria-busy');", "state.card.removeAttribute('aria-busy');\n      state.card.querySelector('.paper-question-pending-message').setAttribute('role', 'alert');"],
   ]);
   await edit('runtime/questionnaire.css', [[
