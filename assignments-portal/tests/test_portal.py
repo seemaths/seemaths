@@ -238,3 +238,34 @@ def test_four_digit_references_are_unique_and_expire_after_seven_days(portal,mon
     assert client.get('/api/assignments',params={'ids':'invalid'}).status_code==422
     now[0]+=WEEK
     assert client.get('/api/assignments',params={'ids':first['id']}).json()['assignments']==[]
+
+
+def test_student_count_means_allocated_ids_even_without_answers_or_after_completion(portal):
+    client,_,_=portal
+    item=assignment(client)
+    path='/api/assignments/'+item['id']
+    assert client.get(path).json()['studentCount']==0
+    child,auth=student(client,item,'a'*43)
+    assert child['answers']==[]
+    assert client.get(path).json()['studentCount']==1
+    assert student(client,item,'a'*43)[0]['id']==child['id']
+    assert client.get('/api/assignments',params={'ids':item['id']}).json()['assignments'][0]['studentCount']==1
+    client.put(path+'/students/'+child['id'],headers=auth,json={'revision':1,'answers':[],'completed':True})
+    assert client.get('/api/assignments').json()['assignments'][0]['studentCount']==1
+    student(client,item,'b'*43)
+    assert client.get(path).json()['studentCount']==2
+
+
+def test_a_stale_tab_cannot_erase_shared_progress(portal):
+    client,_,_=portal
+    item=assignment(client)
+    child,auth=student(client,item)
+    path=f"/api/assignments/{item['id']}/students/{child['id']}"
+    first=client.put(path,headers=auth,json={'revision':1,'answers':[{'index':1,'correct':None,'skipped':True},{'index':2,'correct':True,'helped':True,'checks':2}]})
+    assert first.status_code==200
+    stale=client.put(path,headers=auth,json={'revision':2,'answers':[]}).json()
+    assert stale['answers']==first.json()['answers']
+    corrected=client.put(path,headers=auth,json={'revision':3,'answers':[{'index':1,'correct':True,'checks':1}]}).json()
+    assert corrected['answers'][0]['skipped'] is False
+    assert corrected['answers'][0]['correct'] is True
+    assert corrected['answers'][1]['helped'] is True

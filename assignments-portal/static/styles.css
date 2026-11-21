@@ -1066,3 +1066,10 @@ dialog .actions {
 .get-assignment-link{width:126px;min-width:126px}
 .link-copied-tick{display:inline-block;flex:none;width:18px;visibility:hidden;color:#21824a;font-size:17px;font-weight:700;text-align:right}
 .get-assignment-link.is-copied .link-copied-tick{visibility:visible}
+
+.reload-assignments{grid-column:1;justify-self:end;display:grid;place-items:center;flex:none;width:40px;height:40px;padding:10px;border:1px solid var(--line);border-radius:50%;background:#fff;color:var(--muted)}
+.reload-assignments:hover{background:#edf5f3;color:var(--teal-dark)}
+.reload-assignments svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.assignment-topic{display:flex;align-items:center;gap:9px;min-width:0}
+.assignment-topic h3{min-width:0}
+.student-count{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:25px;height:25px;padding:0 5px;border-radius:50%;background:#e5f1ed;color:var(--teal-dark);font-size:12px;font-weight:650;font-variant-numeric:tabular-nums}

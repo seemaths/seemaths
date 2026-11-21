@@ -90,7 +90,7 @@ export default {
     let body = response.body;
     if (response.ok && /^\/play\/?$/.test(publicPath) && response.headers.get('Content-Type')?.includes('text/html')) {
       body = (await response.text())
-        .replace(/(<script\s+type="module"\s+src=")\/runtime\/seemaths-player\.js(\")/, env.ASSIGNMENTS_ORIGIN ? '$1/student-player.js?v=7$2' : '$&')
+        .replace(/(<script\s+type="module"\s+src=")\/runtime\/seemaths-player\.js(\")/, env.ASSIGNMENTS_ORIGIN ? '$1/student-player.js?v=14$2' : '$&')
         .replace('<p role="status">Opening your activity…</p>', '<div class="seemaths-opening"><div class="paper-loading-progress"><div class="paper-progress-track paper-progress-indeterminate" role="progressbar" aria-label="Loading activity"><div class="paper-progress-fill"></div></div></div></div>')
         .replace('</head>', '<link rel="stylesheet" href="/student-session.css?v=2"></head>');
       responseHeaders.delete('Content-Length');

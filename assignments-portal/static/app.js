@@ -1,4 +1,4 @@
-import {assignmentDateLabel} from '/assignment-display.js?v=1';
+import {assignmentDateLabel} from '/assignment-display.js?v=2';
 import {studentAssignmentURL} from '/assignment-links.js?v=1';
 import '/assignment-library.js?v=1';
 const root = document.querySelector("#app");
@@ -195,7 +195,7 @@ function errorPage(error) {
 }
 function listItem(item) {
   const createdAt=item.createdAt ?? item.expiresAt-(config.lifetimeDays || 7)*86400;
-  return `<article class="assignment-item"><a class="assignment-number reference" href="/manage/${item.id}" aria-label="View assignment ${ref(item.reference)}">${ref(item.reference)}</a><h3 title="${escape(topicLabel(item.recipe.topic))}"><a href="/manage/${item.id}">${escape(topicLabel(item.recipe.topic))}</a></h3><span>${item.recipe.count} ${item.recipe.player==='arcade' ? 'stages' : item.recipe.count === 1 ? 'question' : 'questions'}</span><span class="assignment-dates">${assignmentDateLabel(createdAt,item.expiresAt)}</span><button class="get-assignment-link" type="button" data-assignment-id="${item.id}" aria-label="Copy link for assignment ${ref(item.reference)}"><span>Copy link</span><span class="link-copied-tick" aria-hidden="true">✓</span><span class="link-copy-status visually-hidden" role="status" aria-live="polite"></span></button></article>`;
+  return `<article class="assignment-item"><a class="assignment-number reference" href="/manage/${item.id}" aria-label="View assignment ${ref(item.reference)}">${ref(item.reference)}</a><div class="assignment-topic"><h3 title="${escape(topicLabel(item.recipe.topic))}"><a href="/manage/${item.id}">${escape(topicLabel(item.recipe.topic))}</a></h3><span class="student-count" role="img" aria-label="${item.studentCount || 0} student IDs created" title="${item.studentCount || 0} student IDs created">${item.studentCount || 0}</span></div><span>${item.recipe.count} ${item.recipe.player==='arcade' ? 'stages' : item.recipe.count === 1 ? 'question' : 'questions'}</span><span class="assignment-dates">${assignmentDateLabel(createdAt,item.expiresAt)}</span><button class="get-assignment-link" type="button" data-assignment-id="${item.id}" aria-label="Copy link for assignment ${ref(item.reference)}"><span>Copy link</span><span class="link-copied-tick" aria-hidden="true">✓</span><span class="link-copy-status visually-hidden" role="status" aria-live="polite"></span></button></article>`;
 }
 function searchTerm(value) {
   let term=value.trim();
@@ -220,7 +220,7 @@ async function home() {
   const saved=savedAssignments();
   let mine=new URLSearchParams(location.search).get('view')==='mine' && saved.length>0;
   root.innerHTML=`<h1 class="visually-hidden">Assignments</h1>
-    <div class="assignment-toolbar"><form id="search-form" class="assignment-search" role="search"><input class="search-input" id="query" type="search" maxlength="2048" placeholder="Assignment link, ID, reference or topic" aria-label="Search assignments"><button type="submit">Search</button></form>
+    <div class="assignment-toolbar"><button type="button" class="reload-assignments" id="reload-assignments" aria-label="Reload assignments" title="Reload assignments"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4v6h-6 M20 10a8 8 0 1 0-2.3 8"/></svg></button><form id="search-form" class="assignment-search" role="search"><input class="search-input" id="query" type="search" maxlength="2048" placeholder="Assignment link, ID, reference or topic" aria-label="Search assignments"><button type="submit">Search</button></form>
     <div class="assignment-filters">${saved.length ? `<button type="button" class="mine-filter" id="mine-only" aria-pressed="${mine}"><span class="filter-tick" aria-hidden="true">✓</span>My Assignments</button>` : ''}</div></div>
     <section class="assignment-results"><h2 id="list-heading" class="visually-hidden">All Assignments</h2><p id="list-note" class="visually-hidden" hidden>Assignments created in this browser.</p><div class="assignment-list" id="results"></div><div class="actions" id="pagination"></div></section>`;
   let offset=0, requestVersion=0;
@@ -235,7 +235,14 @@ async function home() {
       if(mine){
         const term=searchTerm(input.value);
         const matches=savedAssignments().filter(a=>[a.id,a.reference,topicLabel(a.recipe.topic)].some(value=>String(value).toLowerCase().replaceAll('-','').includes(term)));
-        rows=matches.slice(offset,offset+25);
+        const page=matches.slice(offset,offset+25);
+        if(page.length){
+          const data=await api(`/api/assignments?ids=${encodeURIComponent(page.map(a=>a.id).join(','))}`);
+          const current=new Map(data.assignments.map(a=>[a.id,a]));
+          rows=page.filter(a=>current.has(a.id)).map(a=>({...a,...current.get(a.id)}));
+          const pageIds=new Set(page.map(a=>a.id));
+          write(mineKey,savedAssignments().filter(a=>!pageIds.has(a.id)||current.has(a.id)).map(a=>current.has(a.id)?{...a,...current.get(a.id)}:a));
+        }
       } else rows=(await api(`/api/assignments?q=${encodeURIComponent(searchTerm(input.value))}&offset=${offset}`)).assignments;
       if(version!==requestVersion) return;
       target.innerHTML=rows.length?rows.map(a=>listItem(a)).join(''):'<p class="muted">No active assignments found.</p>';
@@ -249,6 +256,7 @@ async function home() {
       document.querySelector('#next-page')?.addEventListener('click',()=>{offset+=25;search();});
     } catch(error){if(version!==requestVersion)return;target.innerHTML='<p class="muted">Could not load assignments. Use Search to try again.</p>';toast(error.message);}
   }
+  document.querySelector('#reload-assignments').onclick=async e=>{const button=e.currentTarget;button.disabled=true;try{await search();}finally{button.disabled=false;}};
   document.querySelector('#search-form').onsubmit=e=>{e.preventDefault();offset=0;search();};
   document.querySelector('#mine-only')?.addEventListener('click',e=>{mine=!mine;e.currentTarget.setAttribute('aria-pressed',String(mine));offset=0;history.replaceState(null,'',mine?'/assignments?view=mine':'/assignments');search();});
   await search();
