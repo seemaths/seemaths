@@ -135,15 +135,18 @@ body{position:relative;min-height:100svh}
 /* Centre the compact URL and social sharing icons between the player and actions. */
 .exercise-bottom-row{display:flex;align-items:center;gap:24px;margin-top:20px;min-width:0}
 .exercise-bottom-row .player-setting{margin:0;flex:0 0 196px;align-self:center}
-.exercise-share{flex:1;min-width:0;text-align:center}
-.exercise-share-url{display:block;width:fit-content;max-width:100%;margin:0 auto;color:var(--teal-dark);font-size:16px;font-weight:650;letter-spacing:0;text-decoration:none;overflow-wrap:anywhere;line-height:1.5}
+.exercise-share{flex:1;min-width:0;min-height:64px;display:flex;flex-direction:column;justify-content:center;text-align:center;visibility:hidden}
+.exercise-share.is-ready{visibility:visible}
+.exercise-share-url{display:block;width:fit-content;max-width:100%;margin:0 auto;color:var(--teal-dark);font-size:16px;font-weight:650;letter-spacing:0;text-decoration:none;height:24px;line-height:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .exercise-share-url:hover{text-decoration:underline}
-.exercise-share-actions{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;margin-top:7px}
-.exercise-share-actions button,.exercise-share-actions a{display:inline-flex;align-items:center;justify-content:center;flex:0 0 36px;width:36px;height:36px;min-height:36px;border:0;border-radius:50%;background:none;color:#4b686c;padding:8px;text-decoration:none;cursor:pointer;transition:background .15s,color .15s}
+.exercise-share-actions{display:flex;align-items:center;justify-content:center;flex-wrap:nowrap;gap:0;min-height:36px;margin-top:4px}
+.exercise-share-actions button,.exercise-share-actions a{display:inline-flex;align-items:center;justify-content:center;flex:0 0 32px;width:32px;height:32px;min-height:32px;border:0;border-radius:50%;background:none;color:#4b686c;padding:6px;text-decoration:none;cursor:pointer;transition:background .15s,color .15s}
 .exercise-share-actions svg{display:block;width:20px;height:20px;flex:none}
 .exercise-share-actions button:hover,.exercise-share-actions a:hover{background:#edf5f3;color:var(--teal-dark)}
 #share-whatsapp{color:#168b48}#share-facebook{color:#1877f2}#share-linkedin{color:#0a66c2}
 .exercise-share-actions #share-copy.is-copied{background:#c9efd7;color:#166534}
 @media(max-width:1100px){.exercise-bottom-row{gap:16px;flex-wrap:wrap}.exercise-share{flex-basis:260px}}
 @media(max-width:800px){.activity-controls .finish{width:100%;justify-self:stretch}.activity-controls .actions{flex-direction:row;justify-content:flex-end}.activity-controls .actions button{width:auto;flex:0 1 210px}}
-@media(max-width:540px){.exercise-bottom-row{align-items:flex-start}.exercise-share{flex-basis:100%}.activity-controls .actions button{font-size:14px;min-width:0}.exercise-share-url{font-size:16px}}
+@media(max-width:540px){.exercise-share-actions button,.exercise-share-actions a{flex-basis:36px;width:36px;height:36px;min-height:36px}.exercise-bottom-row{align-items:flex-start}.exercise-share{flex-basis:100%}.activity-controls .actions button{font-size:14px;min-width:0}.exercise-share-url{font-size:16px}}
+.activity-controls .actions .primary-button{background:#e6f1ef;color:var(--teal-dark);box-shadow:none}
+.activity-controls .actions .primary-button:hover{background:#d9eae6}
