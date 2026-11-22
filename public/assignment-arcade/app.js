@@ -1,4 +1,3 @@
-import {createCharacterPicker} from '/arcade-player/character-picker.js';
 import {createSitNStudyIntegration,resetManagedState} from './sitnstudy.js';
 import {freshState,stageIndex,chooseType,present,help,answer,event,localStore,validateState,rewardSettings} from './engine.js';
 import {mountQuestionnaire} from '/runtime/questionnaire.js';
@@ -6,7 +5,7 @@ import {generateExercise} from './campaign.js';
 import {createArcadeAudio} from '/arcade-player/audio.js';
 import {createQuestionQueue} from './questions.js';
 import {createFlowerCelebration} from '/runtime/flower-celebration.js';
-import {animationImage,slots,fighterCelebration,clearFighterAnimation,preloadCelebrations,nextHomeBanner,stagePoses,frozenPose,bannerPoster} from '/arcade-player/animations.js';
+import {animationImage,slots,fighterCelebration,clearFighterAnimation,preloadCelebrations,nextHomeBanner,stagePoses,frozenPose} from '/arcade-player/animations.js';
 
 const root=document.querySelector('#game');
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
@@ -41,7 +40,7 @@ function shell(){
   root.dataset.screen=screen;
   const header=el('header','topbar'),brand=btn('',()=>goHome(),'brand icon-button back-home');brand.setAttribute('aria-label','Journey');brand.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m6-6-6 6 6 6"/></svg>';
   const controls=el('div','top-controls');const coins=el('span','coin-total',`◈ ${state.coins}`);coins.setAttribute('aria-label',`${state.coins} coins`);
-  const parent=btn(screen==='parent'?'↩':'⚙',async()=>{await closeActiveHelp?.();screen==='parent'?showMap():askParentPin();},'quiet icon-button');parent.setAttribute('aria-label',screen==='parent'?'Back to game':'Parent view');if(screen==='map')controls.append(createCharacterPicker(showMap));if(!managedBySitNStudy)controls.append(coins,parent);
+  const parent=btn(screen==='parent'?'↩':'⚙',async()=>{await closeActiveHelp?.();screen==='parent'?showMap():askParentPin();},'quiet icon-button');parent.setAttribute('aria-label',screen==='parent'?'Back to game':'Parent view');if(!managedBySitNStudy)controls.append(coins,parent);
   if(screen==='play'){
     header.classList.add('question-topbar');
     brand.title='Home';header.append(brand);
@@ -62,9 +61,9 @@ function askParentPin(){
   form.append(label,input,submit,cancel);form.onsubmit=e=>{e.preventDefault();if(input.value==='1978'){dialog.close();parents();}else{input.value='';input.setAttribute('aria-invalid','true');input.setAttribute('aria-label','Incorrect PIN. Try again');input.focus();}};
   dialog.append(form);root.append(dialog);dialog.addEventListener('close',()=>dialog.remove());dialog.showModal();input.focus();
 }
-function homeBanner(){const id=nextHomeBanner(),box=el('div','arena home-fight-banner'),image=animationImage(id);box.style.backgroundImage=`url("${bannerPoster(id)}")`;box.style.backgroundSize='contain';box.style.backgroundPosition='center';box.style.backgroundRepeat='no-repeat';image.fetchPriority='high';image.loading='eager';image.addEventListener('load',()=>{box.style.backgroundImage='none';},{once:true});box.append(image);return box;}
+function homeBanner(){const id=nextHomeBanner(),box=el('div','arena home-fight-banner'),image=animationImage(id);box.style.backgroundImage=`url("/arcade-player/assets/banners/${id}-poster.webp")`;box.style.backgroundSize='contain';box.style.backgroundPosition='center';box.style.backgroundRepeat='no-repeat';image.fetchPriority='high';image.loading='eager';box.append(image);return box;}
 function rewardBadge(module){if(managedBySitNStudy)return null;const prefix=`${campaign.id}:${module}${module==='bonus'?'':':'}`,award=state.rewards.filter(r=>module==='bonus'?r.id===prefix:r.id.startsWith(prefix)).at(-1);if(!award)return null;const badge=el('span','stage-earned',`+${award.coins} ◈`);badge.setAttribute('aria-label',`Last level reward: ${award.coins} coins`);return badge;}
-function glove(){const image=frozenPose(slots.cleared);image.className='level-glove';return image;}
+function glove(){const image=el('img','level-glove');image.src='/arcade-player/boxing-glove.svg';image.alt='';image.setAttribute('aria-hidden','true');return image;}
 function showMap(){screen='map';audio.setScene('arena');root.dataset.music=audio.scene;const main=shell();
   main.append(el('h1','sr-only',campaign.title),homeBanner());
   const current=stageIndex(state),journey=el('section','journey');journey.setAttribute('aria-label','Exercise journey');
