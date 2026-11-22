@@ -59,12 +59,12 @@ button:disabled{opacity:.45;cursor:default}
 .topic-step{margin-bottom:0}
 .builder-stepper{--stepper-pink:#b51d69;--stepper-wash:#fbe3ef;margin:32px 0 30px}
 .builder-stepper ol{display:flex;align-items:flex-start;list-style:none;padding:0;margin:0}
-.builder-stepper li{position:relative;flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 10px;color:var(--stepper-pink);text-align:center;font-size:14px;font-weight:600;line-height:1.4}
-.builder-stepper li::before{content:"";position:absolute;top:15px;right:calc(50% + 23px);width:calc(100% - 46px);height:2px;background:var(--stepper-pink)}
+.builder-stepper li{position:relative;flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 10px;color:#727b8e;text-align:center;font-size:14px;font-weight:600;line-height:1.4}
+.builder-stepper li::before{content:"";position:absolute;top:15px;right:calc(50% + 23px);width:calc(100% - 46px);height:2px;background:#dce1e9}
 .builder-stepper li:first-child::before{display:none}
-.stepper-icon{position:relative;display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:50%;background:var(--stepper-wash);border:1.5px solid var(--stepper-pink);color:var(--stepper-pink);font-size:15px;font-weight:750}
+.stepper-icon{position:relative;display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:50%;background:#e5e7ed;border:1.5px solid #d3d7e0;color:#727b8e;font-size:15px;font-weight:750}
 .builder-stepper [aria-current=step]{color:var(--stepper-pink);font-weight:750}
-.builder-stepper [aria-current=step] .stepper-icon{background:var(--stepper-wash);color:var(--stepper-pink);box-shadow:0 0 0 4px #f7d3e5}
+.builder-stepper [aria-current=step] .stepper-icon{background:var(--stepper-wash);border-color:var(--stepper-pink);color:var(--stepper-pink);box-shadow:0 0 0 4px #f7d3e5}
 .builder-stepper .is-complete .stepper-icon{background:#278450;border-color:#278450;color:#fff}
 #mode-step{margin-top:0}
 @media(max-width:540px){.builder-stepper{margin:28px 0}.builder-stepper li{padding:0 4px;gap:9px;font-size:11px}.stepper-icon{width:28px;height:28px;font-size:13px}.builder-stepper li::before{top:13px;right:calc(50% + 18px);width:calc(100% - 36px)}}
