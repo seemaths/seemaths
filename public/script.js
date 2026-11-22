@@ -116,9 +116,7 @@
     $('share-copy').setAttribute('aria-label', 'Copy link');
     $('share-copy').title = 'Copy link';
     if (!sharedURL) return;
-    const display = new URL(sharedURL);
-    $('exercise-share-url').href = sharedURL;
-    $('exercise-share-url').textContent = display.host + display.pathname;
+    $('exercise-share-url').textContent = sharedURL;
     $('share-native').hidden = typeof navigator.share !== 'function';
     const message = `${sharedTitle}\n${sharedURL}`;
     $('share-whatsapp').href = 'https://wa.me/?' + new URLSearchParams({text:message});

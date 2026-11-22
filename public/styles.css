@@ -133,7 +133,6 @@ body{position:relative;min-height:100svh}
 .exercise-share{flex:1;min-width:0;min-height:64px;display:flex;flex-direction:column;justify-content:center;text-align:center;visibility:hidden}
 .exercise-share.is-ready{visibility:visible}
 .exercise-share-url{display:block;width:fit-content;max-width:100%;margin:0 auto;color:var(--teal-dark);font-size:16px;font-weight:650;letter-spacing:0;text-decoration:none;height:24px;line-height:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.exercise-share-url:hover{text-decoration:underline}
 .exercise-share-actions{display:flex;align-items:center;justify-content:center;flex-wrap:nowrap;gap:0;min-height:36px;margin-top:4px}
 .exercise-share-actions button,.exercise-share-actions a{display:inline-flex;align-items:center;justify-content:center;flex:0 0 32px;width:32px;height:32px;min-height:32px;border:0;border-radius:50%;background:none;color:#4b686c;padding:6px;text-decoration:none;cursor:pointer;transition:background .15s,color .15s}
 .exercise-share-actions svg{display:block;width:20px;height:20px;flex:none}
@@ -164,3 +163,9 @@ body.builder-started .masthead .brand,body.builder-started .masthead .player-lin
 @media(prefers-reduced-motion:reduce){.math-margins,.masthead .brand,.masthead .player-links,.masthead .assignments-link{transition:none}}
 
 #activity-form.is-locked #open-activity:disabled{filter:grayscale(1);opacity:.4;cursor:default}
+
+/* The full address is selectable text; sharing controls span its width. */
+.exercise-share-content{width:max-content;max-width:100%;margin:0 auto}
+.exercise-share-url{width:auto;max-width:100%;height:auto;white-space:normal;overflow-wrap:anywhere;overflow:visible;text-overflow:clip;cursor:text;user-select:text}
+.exercise-share-content .exercise-share-actions{width:100%;justify-content:space-between}
+.exercise-share-content .exercise-share-actions button,.exercise-share-content .exercise-share-actions a{flex:1 1 0;min-width:0}
