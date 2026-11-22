@@ -131,6 +131,7 @@ def test_close_does_not_interrupt_existing_students_delete_cascades(portal):
     with db.connect() as tx:
         assert tx.execute('SELECT COUNT(*) AS n FROM participants').fetchone()['n'] == 0
     assert client.get(path).status_code == 404
+    assert client.put(path+f"/students/{learner['id']}", json={'revision': 2, 'answers': []}, headers=auth).status_code == 404
 
 
 def test_expiry_hides_blocks_writes_then_cleanup_deletes(portal):

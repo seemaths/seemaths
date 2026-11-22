@@ -1,7 +1,7 @@
 import {prefetchQuodes,arcadeAssetRoots} from '/offline-downloads.js';
 import {campaignFromRecipe, progressAttempt} from './campaign.js';
 import {putAttempt} from '/runtime/seemaths-attempts.js';
-import {watchProgress} from '/student-session.js?v=16';
+import {watchProgress} from '/student-session.js?v=17';
 
 function stylesheet(href) {
   return new Promise((resolve,reject)=>{

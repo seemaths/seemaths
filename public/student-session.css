@@ -49,3 +49,9 @@ body:has(.seemaths-opening) .seemaths-activity-bar{display:none!important}
   #app .seemaths-standard-branding .paper-home-link{font-size:28px}
   #app .seemaths-standard-branding .paper-brand-icon{width:28px;height:21.875px;border:0;background:transparent}
 }
+
+.exercise-ended-overlay{position:fixed;inset:0;z-index:2147483647;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:32px;background:#f7f8fc;color:#192847;text-align:center;font-family:"Avenir Next",Avenir,sans-serif}
+.exercise-ended-overlay h1{font-size:clamp(24px,5vw,36px);line-height:1.3;margin:0}
+.exercise-ended-overlay p{font-size:18px;line-height:1.5;margin:0;color:#526176;font-variant-numeric:tabular-nums}
+
+.exercise-ended-overlay:focus{outline:0}

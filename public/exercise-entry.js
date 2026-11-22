@@ -102,7 +102,7 @@ async function openExercise() {
     globalThis.seemathsExercisePath = exerciseBase + pin;
     history.replaceState(null, '', url);
     root.className = ''; root.textContent = '';
-    await import('/student-player.js?v=19');
+    await import('/student-player.js?v=20');
   } catch (error) {
     entry(error.name === 'TimeoutError' || error instanceof TypeError ? 'Connect to the internet and try again.' : error.message);
   } finally {root.removeAttribute('aria-busy');}

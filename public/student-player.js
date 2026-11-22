@@ -1,5 +1,5 @@
 import {applyPlayerTheme} from './player-theme.js';
-import { prepareStudent, watchProgress } from './student-session.js?v=16';
+import { prepareStudent, watchProgress } from './student-session.js?v=17';
 import { downloadActivity } from './offline-downloads.js?v=5';
 
 // Apply the See Maths header to every render, including restored attempts.

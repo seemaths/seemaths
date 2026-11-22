@@ -131,6 +131,40 @@ export async function prepareStudent() {
     return session?.id ? session : null;
   }
 }
+let unavailableExercise = false;
+function endUnavailableExercise(session, status) {
+  if (unavailableExercise) return;
+  unavailableExercise = true;
+  session.pending = null;
+  try { localStorage.removeItem(prefix + session.assignmentId); sessionStorage.removeItem(prefix + session.assignmentId); } catch {}
+  const overlay = document.createElement('section');
+  overlay.className = 'exercise-ended-overlay'; overlay.tabIndex = -1;
+  overlay.setAttribute('role', 'alertdialog'); overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-labelledby', 'exercise-ended-title');
+  overlay.setAttribute('aria-describedby', 'exercise-ended-countdown');
+  const heading = document.createElement('h1'); heading.id = 'exercise-ended-title';
+  heading.textContent = status === 410 ? 'This exercise has expired.' : 'This exercise has been deleted.';
+  const countdown = document.createElement('p'); countdown.id = 'exercise-ended-countdown';
+  countdown.setAttribute('role', 'status'); countdown.setAttribute('aria-live', 'polite');
+  overlay.append(heading, countdown);
+  for (const child of document.body.children) child.inert = true;
+  document.body.append(overlay); overlay.focus();
+  const deadline = Date.now() + 10000;
+  function tick() {
+    const seconds = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+    countdown.textContent = `Returning to PIN entry in ${seconds} ${seconds === 1 ? 'second' : 'seconds'}…`;
+    if (seconds) { setTimeout(tick, Math.min(1000, Math.max(1, deadline - Date.now()))); return; }
+    const arcade = session.recipe?.player === 'arcade' || parameters.get('player') === 'arcade';
+    const base = document.documentElement.dataset.exerciseBase;
+    const local = ['localhost', '127.0.0.1', '::1', '[::1]'].includes(location.hostname);
+    const target = base || (local && arcade ? '/' + 'arcade-player/' : local ? '/?player=standard'
+      : ['arcade.seemaths.org','player.seemaths.org'].includes(location.hostname) ? '/'
+      : `https://${arcade ? 'arcade' : 'player'}.seemaths.org/`);
+    location.replace(target);
+  }
+  tick();
+}
+
 export function watchProgress(session) {
   if (!session?.id) return;
   let rerun = false;
@@ -152,7 +186,7 @@ export function watchProgress(session) {
     return dot ? Math.max(0,Number(dot.textContent)-1) : (lastAttempt?.state?.current || 0);
   }
   function interaction(event) {
-    if (session.completedAt) return;
+    if (stopped || session.completedAt) return;
     const button=event.target.closest?.('button');
     if(!button || button.disabled) return;
     const label=(button.getAttribute('aria-label') || button.textContent).trim();
@@ -171,10 +205,10 @@ export function watchProgress(session) {
     if(!/^Check answer$|^Submit(?: exam)?$/i.test(label)) queueMicrotask(()=>sync(true));
   }
   async function sync(forceTime=false) {
-    accrue();
     if (stopped) return;
+    accrue();
     if (busy) { rerun=true; return; }
-    if (Date.now()/1000 >= session.expiresAt) { stopped=true;localStorage.removeItem(prefix+session.assignmentId);sessionStorage.removeItem(prefix+session.assignmentId);notice('This exercise has expired.');return; }
+    if (Date.now()/1000 >= session.expiresAt) { stopped=true;endUnavailableExercise(session,410);return; }
     busy=true;
     try {
       const attemptId=new URLSearchParams(location.search).get('attempt') || session.sharedAttemptId;
@@ -196,7 +230,8 @@ export function watchProgress(session) {
         session.pending=null;session.answers=mergeQuestionOutcomes(session.answers,result.answers);session.revision=Math.max(session.revision || 0,result.revision || 0);session.updatedAt=result.updatedAt;session.completedAt=result.completedAt;session.activeSeconds=result.activeSeconds;save(session);
       }
     } catch(error) {
-      if([403,404,409,410].includes(error.status)){stopped=true;notice(error.message);}
+      if([404,410].includes(error.status)){stopped=true;endUnavailableExercise(session,error.status);}
+      else if([403,409].includes(error.status)){stopped=true;notice(error.message);}
     } finally {busy=false;if(rerun){rerun=false;queueMicrotask(sync);}}
   }
   document.addEventListener('click',interaction,true);
@@ -204,7 +239,7 @@ export function watchProgress(session) {
   const onOnline=()=>sync();
   window.addEventListener('seemaths:attempt-saved',onSaved);
   window.addEventListener('online',onOnline);
-  document.addEventListener('visibilitychange',()=>{accrue();save(session);if(document.hidden)sync(true);});
-  window.addEventListener('pagehide',()=>{accrue();save(session);sync(true);window.removeEventListener('seemaths:attempt-saved',onSaved);window.removeEventListener('online',onOnline);document.removeEventListener('click',interaction,true);},{once:true});
+  document.addEventListener('visibilitychange',()=>{if(stopped)return;accrue();save(session);if(document.hidden)sync(true);});
+  window.addEventListener('pagehide',()=>{if(!stopped){accrue();save(session);sync(true);}window.removeEventListener('seemaths:attempt-saved',onSaved);window.removeEventListener('online',onOnline);document.removeEventListener('click',interaction,true);},{once:true});
   sync();
 }

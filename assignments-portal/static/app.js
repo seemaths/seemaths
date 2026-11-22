@@ -346,7 +346,7 @@ async function dashboard(id) {
     if (
       !(await confirmAction(
         "Delete this exercise?",
-        "This permanently deletes the exercise and every student’s stored progress. Student links will stop working.",
+        "This permanently deletes the exercise and every student’s stored progress, including work in progress. Active students return to PIN entry 10 seconds after their next progress update discovers the deletion.",
       ))
     )
       return;
