@@ -162,3 +162,5 @@ body.builder-started .masthead .brand,body.builder-started .masthead .player-lin
 #activity-form.is-locked .topics .topic-symbol{filter:none}
 #activity-form.is-locked .topic-tile:hover .topic-symbol,#activity-form.is-locked .chip:hover{transform:none;box-shadow:none}
 @media(prefers-reduced-motion:reduce){.math-margins,.masthead .brand,.masthead .player-links,.masthead .assignments-link{transition:none}}
+
+#activity-form.is-locked #open-activity:disabled{filter:grayscale(1);opacity:.4;cursor:default}

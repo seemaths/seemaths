@@ -65,6 +65,7 @@
   function setSetupLocked(locked) {
     setupLocked = locked;
     form.classList.toggle('is-locked', locked);
+    $('open-activity').disabled = locked || !topic || !mode;
     form.querySelectorAll('[data-topic], [data-mode], .settings-grid input, #player-setting input, #duration-setting input, [data-minutes]').forEach(control => {
       control.disabled = locked;
     });
