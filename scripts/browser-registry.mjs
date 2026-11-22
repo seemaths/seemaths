@@ -23,7 +23,7 @@ export async function buildBrowserRegistry(output, catalog, overrides = {}) {
     const contract='campaign=await response.json();';
     if(!source.includes('prefetchQuodes(')) {
       if(!source.includes(contract)) throw Error('Arcade campaign loading contract changed');
-      source="import {prefetchQuodes,arcadeAssetRoots} from '/offline-downloads.js';\n"+source.replace(contract,contract+"await prefetchQuodes(campaign.exercises.map(exercise=>exercise.quode||exercise.id),[location.href,...await arcadeAssetRoots(),...performance.getEntriesByType('resource').map(entry=>entry.name)]);");
+      source="import {prefetchQuodes,arcadeAssetRoots} from '/offline-downloads.js';\n"+source.replace(contract,contract+"globalThis.quodeArcadeDownloads=arcadeAssetRoots().then(artwork=>prefetchQuodes(campaign.exercises.map(exercise=>exercise.quode||exercise.id),[location.href,...artwork,...performance.getEntriesByType('resource').map(entry=>entry.name)])).then(()=>true).catch(error=>{console.warn('Arcade downloads paused; reconnect to retry.',error);return false;});");
       await writeFile(file,source);
     }
   }

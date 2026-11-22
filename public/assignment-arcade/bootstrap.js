@@ -19,7 +19,6 @@ export async function startArcade(student) {
     // Keep the existing Arcade artwork/runtime assets and its standalone game intact.
     await stylesheet('/arcade-player/style.css');
     await stylesheet('/assignment-arcade/style.css');
-    await prefetchQuodes(campaign.exercises.map(exercise=>exercise.quode||exercise.id),[location.href,'/assignment-arcade/bootstrap.js','/assignment-arcade/app.js',...await arcadeAssetRoots(),...performance.getEntriesByType('resource').map(entry=>entry.name)]);
     document.body.classList.add('assignment-arcade');
     root.id='game';root.removeAttribute('aria-label');
     document.title='Arcade · See Maths';
@@ -35,6 +34,7 @@ export async function startArcade(student) {
     };
     watchProgress(student);
     await import('./app.js');
+    globalThis.quodeArcadeDownloads=prefetchQuodes(campaign.exercises.map(exercise=>exercise.quode||exercise.id),[location.href,'/assignment-arcade/bootstrap.js','/assignment-arcade/app.js',...await arcadeAssetRoots(),...performance.getEntriesByType('resource').map(entry=>entry.name)]).then(()=>true).catch(error=>{console.warn('Arcade downloads paused; reconnect to retry.',error);return false;});
   } catch(error) {
     const message=document.createElement('p');message.textContent=error.message;
     const retry=document.createElement('button');retry.textContent='Try again';retry.onclick=()=>location.reload();

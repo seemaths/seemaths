@@ -79,7 +79,7 @@ function closure(manifest,roots) {
 async function saveResources(manifest,roots) {
   await rememberRoots(manifest,roots);
   const pending=closure(manifest,roots), missing=[];
-  await Promise.all(Array.from({length:3},async()=>{
+  await Promise.all(Array.from({length:8},async()=>{
     while(pending.length) {const name=pending.shift();try{await storeBlob(manifest.assets[name]);}catch{missing.push(name);}}
   }));
   return missing;

@@ -231,7 +231,7 @@ export async function prefetchQuodes(ids, roots = []) {
   })];
   await new Promise((resolve,reject)=>{
     const channel=new MessageChannel();
-    const timer=setTimeout(()=>{channel.port1.close();reject(Error('Exercise downloads are paused. Please retry.'));},60000);
+    const timer=setTimeout(()=>{channel.port1.close();reject(Error('Exercise downloads are paused. Please retry.'));},180000);
     channel.port1.onmessage=({data})=>{clearTimeout(timer);channel.port1.close();
       data?.activityDownloads===1&&Array.isArray(data.missing)&&!data.missing.length?resolve():reject(Error('Connect to finish downloading this exercise.'));
     };
