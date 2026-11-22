@@ -1,3 +1,4 @@
+import {prefetchQuodes,arcadeAssetRoots} from '/offline-downloads.js';
 import {campaignFromRecipe, progressAttempt} from './campaign.js';
 import {putAttempt} from '/runtime/seemaths-attempts.js';
 import {watchProgress} from '/student-session.js?v=16';
@@ -18,6 +19,7 @@ export async function startArcade(student) {
     // Keep the existing Arcade artwork/runtime assets and its standalone game intact.
     await stylesheet('/arcade-player/style.css');
     await stylesheet('/assignment-arcade/style.css');
+    await prefetchQuodes(campaign.exercises.map(exercise=>exercise.quode||exercise.id),[location.href,'/assignment-arcade/bootstrap.js','/assignment-arcade/app.js',...await arcadeAssetRoots(),...performance.getEntriesByType('resource').map(entry=>entry.name)]);
     document.body.classList.add('assignment-arcade');
     root.id='game';root.removeAttribute('aria-label');
     document.title='Arcade · See Maths';
