@@ -1,3 +1,4 @@
+import {buildBrowserRegistry} from './browser-registry.mjs';
 // Export the existing read-only JavaScript host at build time. No generators run
 // here: only browser source, metadata, templates and HTML shells are published.
 import {createServer} from 'node:http';
@@ -142,6 +143,7 @@ export async function buildQuodes(output) {
     await write('runtime/service-worker.js',sw);
     for(const name of ['mathspace','naplan','psat'])await write(`${name}-player/service-worker.js`,sw);
     await write('static-release.json',JSON.stringify({release,generators:catalog.length,files,bytes,execution:'browser',delivery:'cloudflare-static-assets'},null,2));
+    await buildBrowserRegistry(output,catalog);
     await write('_headers','/*\n  X-Content-Type-Options: nosniff\n  X-SeeMaths-Delivery: static\n  Cache-Control: public, max-age=0, must-revalidate\n/api/*\n  Content-Type: application/json; charset=utf-8\n/arcade-player/sw.js\n  Service-Worker-Allowed: /\n');
     await write('_redirects','/:id/player/* /:id/web/:splat 200\n');
     console.log(JSON.stringify({release,generators:catalog.length,files,bytes}));

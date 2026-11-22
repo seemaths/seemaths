@@ -1,3 +1,4 @@
+import {prefetchQuodes,arcadeAssetRoots} from '/offline-downloads.js';
 import {campaignFromRecipe, progressAttempt} from './campaign.js';
 import {putAttempt} from '/runtime/seemaths-attempts.js';
 import {watchProgress} from '/student-session.js?v=16';
@@ -33,6 +34,7 @@ export async function startArcade(student) {
     };
     watchProgress(student);
     await import('./app.js');
+    globalThis.quodeArcadeDownloads=prefetchQuodes(campaign.exercises.map(exercise=>exercise.quode||exercise.id),[location.href,'/assignment-arcade/bootstrap.js','/assignment-arcade/app.js',...await arcadeAssetRoots(),...performance.getEntriesByType('resource').map(entry=>entry.name)]).then(()=>true).catch(error=>{console.warn('Arcade downloads paused; reconnect to retry.',error);return false;});
   } catch(error) {
     const message=document.createElement('p');message.textContent=error.message;
     const retry=document.createElement('button');retry.textContent='Try again';retry.onclick=()=>location.reload();
