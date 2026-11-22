@@ -8,7 +8,7 @@
   <meta property="og:title" content="See Maths">
   <meta property="og:url" content="https://seemaths.org/">
   <link rel="icon" href="/favicon.svg?v=division" type="image/svg+xml">
-  <link rel="stylesheet" href="/styles.css?v=exercise-sharing-5">
+  <link rel="stylesheet" href="/styles.css?v=builder-stepper-1">
   <link rel="stylesheet" href="/runtime/page-layout.css">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=division">
@@ -18,7 +18,7 @@
   <title>See Maths</title>
   <link rel="stylesheet" href="/assignment-library.css?v=1">
   <script src="/assignment-library.js?v=2" defer></script>
-  <script src="/script.js?v=exercise-links-16" defer></script>
+  <script src="/script.js?v=builder-stepper-1" defer></script>
   <link rel="stylesheet" href="/seemaths-brand.css?v=1">
 </head>
 <body>
@@ -64,6 +64,16 @@
           <button type="button" class="chip topic-tile random-chip" data-topic="random" aria-pressed="false"><span class="topic-symbol" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M8 14h6c10 0 10 20 20 20h7M35 28l6 6-6 6M8 34h6c4 0 6-3 8-7M26 20c2-4 4-6 8-6h7M35 8l6 6-6 6"/></svg></span><span class="topic-name">Mixed</span></button>
         </div>
       </fieldset>
+
+      <nav class="builder-stepper" aria-label="Question-set progress">
+        <ol>
+          <li data-builder-step="0" aria-current="step"><span class="stepper-icon" aria-hidden="true">1</span><span>Choose a topic</span></li>
+          <li data-builder-step="1"><span class="stepper-icon" aria-hidden="true">2</span><span>Choose a type</span></li>
+          <li data-builder-step="2"><span class="stepper-icon" aria-hidden="true">3</span><span>Design question-set</span></li>
+          <li data-builder-step="3"><span class="stepper-icon" aria-hidden="true">4</span><span>Self-study or Create Exercise</span></li>
+        </ol>
+        <span id="stepper-status" class="visually-hidden" role="status" aria-live="polite">Step 1 of 4: Choose a topic</span>
+      </nav>
 
       <fieldset class="step" id="mode-step" hidden>
         <legend class="visually-hidden">Activity</legend>
@@ -144,12 +154,6 @@
       </section>
       </div>
     </form>
-    <div class="sample-divider">
-      <h2>10 Sample Questions</h2>
-    </div>
-    <section class="question-showcase" aria-label="Sample practice questions">
-      <iframe id="question-preview" src="/runtime/home-preview.html" title="Ten sample practice questions" loading="eager"></iframe>
-    </section>
     <noscript><p class="noscript">Please enable JavaScript to prepare your activity.</p></noscript>
   </main>
 </body>

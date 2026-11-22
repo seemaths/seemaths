@@ -56,99 +56,38 @@
     }
   });
 
-  let previewCurrent = 0, previewHeight = 360, previewHelp = false;
-  let followPreview = false, previewScrollTimer;
-  function refreshPreview(topics) {
-    const frame = $('question-preview');
-    previewCurrent = 0;
-    previewHelp = false;
-    followPreview = false;
-    clearTimeout(previewScrollTimer);
-    frame.classList.remove('preview-help');
-    const params = new URLSearchParams();
-    if (topics && topics !== 'random') params.set('topics', topics);
-    frame.src = '/runtime/home-preview.html' + (params.size ? '?' + params : '');
-  }
-
-  const questionFrameHeight = () => Math.min(previewHeight, Math.max(240, innerHeight - 48));
-  function scrollPreview(force = false) {
-    if (previewHelp && !force) return;
-    const frame = $('question-preview');
-    const bounds = frame.getBoundingClientRect();
-    // Follow questions down the page without pulling the reader back up.
-    if (bounds.top <= 24) return;
-    if (!force && bounds.top >= 24 && bounds.bottom <= innerHeight - 24) return;
-    window.scrollTo({top:scrollY + bounds.top - 24, behavior:matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'});
-  }
-  function previewStep(step) {
-    const index = previewCurrent + step;
-    if (index < 0 || index >= 10) return;
-    previewHelp = false;
-    followPreview = true;
-    $('question-preview').classList.remove('preview-help');
-    $('question-preview').style.height = `${questionFrameHeight()}px`;
-    $('question-preview').contentWindow.postMessage({type:'preview-question',index},location.origin);
-  }
-  window.addEventListener('resize', () => {
-    const frame = $('question-preview');
-    frame.style.height = `${previewHelp ? Math.max(240, innerHeight - 48) : questionFrameHeight()}px`;
-    if (previewHelp) scrollPreview(true);
-  });
-  document.querySelectorAll('[data-preview-step]').forEach(button => button.addEventListener('click', () => previewStep(Number(button.dataset.previewStep))));
-  window.addEventListener('message', event => {
-    const frame = $('question-preview');
-    if (event.origin !== location.origin || event.source !== frame?.contentWindow) return;
-    if (event.data?.type === 'preview-current') {
-      previewCurrent = event.data.index;
-      document.querySelectorAll('[data-preview-step]').forEach(button => {
-        button.disabled = previewCurrent + Number(button.dataset.previewStep) < 0 || previewCurrent + Number(button.dataset.previewStep) >= 10;
-      });
-
-    }
-    if (event.data?.type === 'preview-step' && !previewHelp && [-1,1].includes(event.data.step)) previewStep(event.data.step);
-    if (event.data?.type === 'preview-resume') {
-      previewHelp = false;
-      frame.classList.remove('preview-help');
-      frame.style.height = `${questionFrameHeight()}px`;
-    }
-    if (event.data?.type === 'preview-help') {
-      clearTimeout(previewScrollTimer);
-      followPreview = false;
-      previewHelp = true;
-      frame.classList.add('preview-help');
-      frame.style.height = `${Math.max(240, window.innerHeight - 48)}px`;
-      scrollPreview(true);
-      requestAnimationFrame(() => requestAnimationFrame(() => frame.contentWindow.postMessage({type:'preview-help-ready'},location.origin)));
-    }
-    if (event.data?.type === 'preview-height' && Number.isFinite(event.data.height)) {
-      const height = Math.max(160, Math.min(1800, event.data.height));
-      previewHeight = height;
-      if (!previewHelp) {
-        frame.style.height = `${questionFrameHeight()}px`;
-        if (followPreview) {
-          clearTimeout(previewScrollTimer);
-          previewScrollTimer = setTimeout(scrollPreview, 420);
-        }
-      }
-
-    }
-  });
-  const showcase = document.querySelector('.question-showcase');
-  let previousFormHeight = form.getBoundingClientRect().height;
-  let showcaseMotion;
-  new ResizeObserver(() => {
-    const height = form.getBoundingClientRect().height;
-    const delta = previousFormHeight - height;
-    previousFormHeight = height;
-    if (Math.abs(delta) < 1 || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const offset = showcaseMotion?.playState === 'running' ? new DOMMatrix(getComputedStyle(showcase).transform).m42 : 0;
-    showcaseMotion?.cancel();
-    showcaseMotion = showcase.animate([{transform:`translateY(${delta + offset}px)`},{transform:'translateY(0)'}],{duration:420,easing:'cubic-bezier(.22,1,.36,1)'});
-  }).observe(form);
   let topic = null;
   const selectedTopics = new Set();
   const subjectOrder = ['algebra','arithmetic','geometry','measurement','number','statistics'];
   let mode = null;
+  let designComplete = false, actionComplete = false;
+  function updateStepper() {
+    const active = !topic ? 0 : !mode ? 1 : !designComplete || !validate() ? 2 : actionComplete ? 4 : 3;
+    document.querySelectorAll('[data-builder-step]').forEach((step, index) => {
+      const complete = index < active;
+      step.classList.toggle('is-complete', complete);
+      if (index === active) step.setAttribute('aria-current', 'step');
+      else step.removeAttribute('aria-current');
+      step.querySelector('.stepper-icon').textContent = complete ? '✓' : String(index + 1);
+      step.setAttribute('aria-label', `${index + 1}. ${step.lastElementChild.textContent}${complete ? ', complete' : ''}`);
+    });
+    const current = document.querySelector('[data-builder-step][aria-current]');
+    const status = active === 4 ? 'All steps complete' : `Step ${active + 1} of 4: ${current.lastElementChild.textContent}`;
+    if ($('stepper-status').textContent !== status) $('stepper-status').textContent = status;
+  }
+  // Defaults are valid too: reaching the actions accepts the current design.
+  $('settings-step').addEventListener('input', () => {
+    designComplete = true; actionComplete = false; updateStepper();
+  });
+  $('settings-step').addEventListener('change', () => {
+    designComplete = true; actionComplete = false; updateStepper();
+  });
+  $('settings-step').addEventListener('click', event => {
+    if (event.target.closest('[data-minutes]')) { designComplete = true; actionComplete = false; updateStepper(); }
+  });
+  document.querySelector('.actions').addEventListener('focusin', () => {
+    designComplete = true; updateStepper();
+  });
   const sharedAssignments = new Map();
   function updateCopyLabel() {
     const assignment = topic && mode ? sharedAssignments.get(activityUrl()) : null;
@@ -184,12 +123,13 @@
   else { random[0] = Date.now() >>> 0; random[1] = Math.floor(Math.random() * 0xffffffff); }
   let blueprint = [...random].map(n => n.toString(36)).join('-');
   function freshHome(event) {
-    if (event?.persisted) refreshPreview(null);
     cancelAnimationFrame(scrollFrame);
     form.reset();
     $('question-count').value = '20';
     topic = null;
     mode = null;
+    designComplete = false; actionComplete = false;
+    updateStepper();
     selectedTopics.clear();
     if (globalThis.crypto?.getRandomValues) crypto.getRandomValues(random);
     else { random[0] = Date.now() >>> 0; random[1] = Math.floor(Math.random() * 0xffffffff); }
@@ -299,6 +239,7 @@
   function update() {
     $('copy-feedback').hidden = true;
     updateCopyLabel();
+    updateStepper();
     if (!topic || !mode) return;
     $('duration-setting').hidden = mode !== 'exam';
     $('player-setting').hidden = mode !== 'practice';
@@ -318,6 +259,7 @@
     document.querySelectorAll('[data-minutes]').forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset.minutes) === Number($('exam-minutes').value))));
   }
   document.querySelectorAll('[data-topic]').forEach(button => button.addEventListener('click', () => {
+    actionComplete = false;
     const chosen = button.dataset.topic;
     if (chosen === 'random') {
       selectedTopics.clear(); subjectOrder.forEach(t => selectedTopics.add(t));
@@ -325,13 +267,14 @@
     else selectedTopics.add(chosen);
     topic = selectedTopics.size === subjectOrder.length ? 'random' : subjectOrder.filter(t => selectedTopics.has(t)).join(',') || null;
     document.querySelectorAll('[data-topic]').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.topic === 'random' ? topic === 'random' : selectedTopics.has(item.dataset.topic))));
-    refreshPreview(topic);
     $('open-activity').disabled = !topic;
     $('copy-link').disabled = !topic;
     if (!topic) { $('activity-summary').textContent = ''; $('activity-link').value = ''; }
     reveal('mode-step'); update(); followSelection(button, $('mode-step'));
   }));
   document.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => {
+    if (mode !== button.dataset.mode) designComplete = false;
+    actionComplete = false;
     mode = button.dataset.mode;
     document.querySelectorAll('[data-mode]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
     reveal('settings-step'); reveal('finish-step'); update(); followSelection(button, document.querySelector('.question-setting'));
@@ -424,6 +367,7 @@
     try { url = await assignmentLink(); }
     catch (error) { $('status').textContent = error.message; button.disabled = false; return; }
     button.disabled = false;
+    designComplete = true; actionComplete = true; updateStepper();
     $('activity-link').value = url;
     try {
       if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
@@ -440,6 +384,7 @@
   form.addEventListener('submit', event => {
     event.preventDefault();
     if (!validate(true)) return;
+    designComplete = true; actionComplete = true; updateStepper();
     location.assign(activityUrl());
   });
 })();

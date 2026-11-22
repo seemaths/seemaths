@@ -50,24 +50,20 @@ button:disabled{opacity:.45;cursor:default}
 .actions svg{flex:none;width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 @media(max-width:540px){.actions{align-items:center}.actions .primary-button,.actions .copy-button{flex:0 0 auto;width:min(100%,240px)}}
 
-/* The preview follows the builder in normal flow as options expand. */
-.question-showcase{position:relative;margin-top:28px;overflow-anchor:none}
-#question-preview{display:block;width:100%;height:360px;border:1px solid var(--line);border-radius:22px;background:#fff}
+/* Horizontal progress below the topic buttons. */
 .topic-step{margin-bottom:0}
-#mode-step{margin-top:28px}
-.sample-divider{display:flex;align-items:center;gap:12px;margin:36px 0 24px;color:var(--muted)}
-.sample-divider::before,.sample-divider::after{content:"";height:1px;flex:1;background:var(--line)}
-.sample-divider h2{flex:none;margin:0;font-size:14px;font-weight:650;line-height:1.4;text-align:center}
-.sample-divider button{display:grid;place-items:center;flex:none;width:36px;height:36px;padding:7px;border:1px solid var(--line);border-radius:50%;background:#fff;color:var(--ink)}
-.sample-divider button:disabled{opacity:.3;cursor:default}
-.sample-divider svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.sample-divider+.question-showcase{margin-top:0}
-@media(max-width:540px){.sample-divider{gap:8px}}
-
-#question-preview{transition:height 400ms cubic-bezier(.22,.61,.36,1);overflow-anchor:none}
-@media(prefers-reduced-motion:reduce){#question-preview{transition:none}}
-
-#question-preview.preview-help{transition:none}
+.builder-stepper{margin:32px 0 30px}
+.builder-stepper ol{display:flex;align-items:flex-start;list-style:none;padding:0;margin:0}
+.builder-stepper li{position:relative;flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 10px;color:#727b8e;text-align:center;font-size:14px;font-weight:600;line-height:1.4}
+.builder-stepper li::before{content:"";position:absolute;top:15px;right:calc(50% + 23px);width:calc(100% - 46px);height:2px;background:#dce1e9}
+.builder-stepper li:first-child::before{display:none}
+.stepper-icon{position:relative;display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:50%;background:#dce1e9;color:#536078;font-size:15px;font-weight:750}
+.builder-stepper [aria-current=step]{color:var(--ink);font-weight:750}
+.builder-stepper [aria-current=step] .stepper-icon{background:var(--teal);color:#fff;box-shadow:0 0 0 4px #e4f2ef}
+.builder-stepper .is-complete .stepper-icon{background:#278450;color:#fff}
+.builder-stepper .is-complete::before,.builder-stepper [aria-current=step]::before{background:#278450}
+#mode-step{margin-top:0}
+@media(max-width:540px){.builder-stepper{margin:28px 0}.builder-stepper li{padding:0 4px;gap:9px;font-size:11px}.stepper-icon{width:28px;height:28px;font-size:13px}.builder-stepper li::before{top:13px;right:calc(50% + 18px);width:calc(100% - 36px)}}
 
 /* Quiet mathematical sketches live entirely in the wide-screen margins. */
 body{position:relative;min-height:100svh}
