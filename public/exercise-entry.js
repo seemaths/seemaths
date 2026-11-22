@@ -1,7 +1,9 @@
 import {createLoadingProgress} from '/runtime/loading-progress.js';
 const root = document.querySelector('#app');
-const arcade = location.hostname === 'arcade.seemaths.org' || new URLSearchParams(location.search).get('player') === 'arcade';
-const pin = /^\/([0-9]{4})\/?$/.exec(location.pathname)?.[1];
+const exerciseBase = document.documentElement.dataset.exerciseBase || '/';
+const arcade = document.documentElement.dataset.exercisePlayer === 'arcade' || location.hostname === 'arcade.seemaths.org' || new URLSearchParams(location.search).get('player') === 'arcade';
+const pinPath = location.pathname.startsWith(exerciseBase) ? location.pathname.slice(exerciseBase.length) : '';
+const pin = /^([0-9]{4})\/?$/.exec(pinPath)?.[1];
 document.title = arcade ? 'Arcade · See Maths' : 'See Maths';
 
 function entry(message = '') {
@@ -68,7 +70,7 @@ function entry(message = '') {
         error.textContent = [404,410].includes(response.status) ? 'Exercise Not Found' : 'Could not check the PIN. Try again.';
         return;
       }
-      const target = new URL('/' + code, location.origin);
+      const target = new URL(exerciseBase + code, location.origin);
       if (!location.hostname.endsWith('.seemaths.org')) target.searchParams.set('player', arcade ? 'arcade' : 'standard');
       location.assign(target);
     } catch {
@@ -97,7 +99,7 @@ async function openExercise() {
     const url = new URL(location.href);
     for (const [key,value] of Object.entries(exercise.recipe)) if (key !== 'stages' && value != null) url.searchParams.set(key,value);
     url.searchParams.set('assignment', exercise.id);
-    globalThis.seemathsExercisePath = '/' + pin;
+    globalThis.seemathsExercisePath = exerciseBase + pin;
     history.replaceState(null, '', url);
     root.className = ''; root.textContent = '';
     await import('/student-player.js?v=19');
