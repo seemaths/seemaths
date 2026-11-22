@@ -149,3 +149,16 @@ body{position:relative;min-height:100svh}
 .activity-controls{position:relative}
 .close-activity-panel{position:absolute;z-index:5;top:9px;right:9px;display:grid;place-items:center;width:28px;height:28px;padding:5px;border:0;border-radius:50%;background:#e6f1ef;color:var(--teal-dark)}
 .close-activity-panel:hover{background:#d9eae6}.close-activity-panel svg{display:block;width:18px;height:18px}
+
+/* Focus attention on the builder once a topic has been selected. */
+.math-margins{opacity:1;transition:opacity 1.4s ease}
+body.builder-started .math-margins{opacity:0}
+.masthead .brand,.masthead .player-links,.masthead .assignments-link{transition:filter .4s ease,opacity .4s ease}
+body.builder-started .masthead .brand,body.builder-started .masthead .player-links,body.builder-started .masthead .assignments-link{filter:grayscale(1);opacity:.4}
+.modes:has([aria-pressed=true]) .chip[aria-pressed=false]{filter:grayscale(1);opacity:.35}
+.modes:has([aria-pressed=true]) .chip[aria-pressed=false]:is(:hover,:focus-visible){opacity:.6}
+#activity-form.is-locked .topics,#activity-form.is-locked .modes,#activity-form.is-locked .settings-grid,#activity-form.is-locked #player-setting,#activity-form.is-locked #duration-setting{filter:grayscale(1);opacity:.4}
+#activity-form.is-locked .topics .topic-symbol,#activity-form.is-locked .topics .topic-name,#activity-form.is-locked .modes .chip,#activity-form.is-locked input:disabled,#activity-form.is-locked button:disabled{opacity:1}
+#activity-form.is-locked .topics .topic-symbol{filter:none}
+#activity-form.is-locked .topic-tile:hover .topic-symbol,#activity-form.is-locked .chip:hover{transform:none;box-shadow:none}
+@media(prefers-reduced-motion:reduce){.math-margins,.masthead .brand,.masthead .player-links,.masthead .assignments-link{transition:none}}

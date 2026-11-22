@@ -61,6 +61,15 @@
   const subjectOrder = ['algebra','arithmetic','geometry','measurement','number','statistics'];
   let mode = null;
   let designComplete = false, actionComplete = false;
+  let setupLocked = false;
+  function setSetupLocked(locked) {
+    setupLocked = locked;
+    form.classList.toggle('is-locked', locked);
+    form.querySelectorAll('[data-topic], [data-mode], .settings-grid input, #player-setting input, #duration-setting input, [data-minutes]').forEach(control => {
+      control.disabled = locked;
+    });
+  }
+
   function updateStepper() {
     const active = !topic ? 0 : !mode ? 1 : !designComplete || !validate() ? 2 : actionComplete ? 4 : 3;
     document.querySelectorAll('[data-builder-step]').forEach((step, index) => {
@@ -124,6 +133,8 @@
   let blueprint = [...random].map(n => n.toString(36)).join('-');
   function freshHome(event) {
     cancelAnimationFrame(scrollFrame);
+    setSetupLocked(false);
+    document.body.classList.remove('builder-started');
     form.reset();
     $('question-count').value = '20';
     topic = null;
@@ -265,6 +276,7 @@
       selectedTopics.clear(); subjectOrder.forEach(t => selectedTopics.add(t));
     } else if (selectedTopics.has(chosen)) selectedTopics.delete(chosen);
     else selectedTopics.add(chosen);
+    document.body.classList.add('builder-started');
     topic = selectedTopics.size === subjectOrder.length ? 'random' : subjectOrder.filter(t => selectedTopics.has(t)).join(',') || null;
     document.querySelectorAll('[data-topic]').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.topic === 'random' ? topic === 'random' : selectedTopics.has(item.dataset.topic))));
     $('open-activity').disabled = !topic;
@@ -280,6 +292,7 @@
     reveal('settings-step'); reveal('finish-step'); update(); followSelection(button, document.querySelector('.question-setting'));
   }));
   $('close-activity-panel').addEventListener('click', () => {
+    if (setupLocked) { freshHome(); return; }
     cancelAnimationFrame(scrollFrame);
     for (const id of ['settings-step', 'finish-step']) {
       $(id).hidden = true; $(id).classList.remove('revealed');
@@ -362,11 +375,18 @@
   $('copy-link').addEventListener('click', async () => {
     if (!validate(true)) return;
     const button = $('copy-link'); button.disabled = true;
+    setSetupLocked(true);
+    $('close-activity-panel').disabled = true;
     $('status').textContent = ''; $('copy-feedback').hidden = true;
     let url;
     try { url = await assignmentLink(); }
-    catch (error) { $('status').textContent = error.message; button.disabled = false; return; }
+    catch (error) {
+      $('status').textContent = error.message; button.disabled = false;
+      setSetupLocked(false); $('close-activity-panel').disabled = false;
+      return;
+    }
     button.disabled = false;
+    $('close-activity-panel').disabled = false;
     designComplete = true; actionComplete = true; updateStepper();
     $('activity-link').value = url;
     try {
