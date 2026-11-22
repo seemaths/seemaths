@@ -13,6 +13,9 @@ try {
  await context.route('**/api/assignments/**',route=>route.fulfill({json:new URL(route.request().url()).pathname.endsWith('/join')?{id:'00000000-0000-4000-8000-000000000002',number:9999,attemptId:'00000000-0000-4000-8000-000000000003'}:assignment}));
  await page.goto(origin+'/play?mode=practice&player=arcade&count=3&levelMin=1&levelMax=1');
  await page.waitForSelector('#game .topbar',{timeout:60000});
+ await page.waitForFunction(()=>!!globalThis.quodeArcadeDownloads);
+ const openedBeforeDownloadsComplete=await page.evaluate(()=>Promise.race([globalThis.quodeArcadeDownloads.then(()=>false),new Promise(resolve=>setTimeout(()=>resolve(true),0))]));assert.equal(openedBeforeDownloadsComplete,true);
+ assert.equal(await page.evaluate(()=>globalThis.quodeArcadeDownloads),true);
  await page.waitForLoadState('networkidle');
  const ready=await status(page);assert.deepEqual(ready.missing,[]);assert.deepEqual(ready.quodes.map(q=>q.id).sort(),ids.sort());
  const saved=page.url();await context.setOffline(true);await page.goto(saved);await page.waitForSelector('#game .topbar');
@@ -23,6 +26,6 @@ try {
  await page.waitForFunction(()=>[...document.images].every(image=>image.complete&&image.naturalWidth>0));
  assert.equal(await page.locator('[data-failed]').count(),0);assert.equal(await page.locator('.home-fight-banner').getAttribute('data-character'),'sakura');
  assert.deepEqual(errors,[]);
- const result={selectedQuodes:ids.length,allPrefetchedBeforeGame:true,unrelatedQuodesNotDownloaded:true,offlineReopened:true,offlineCharacterSwitch:true,offlineGenerated:generated.length,errors};
+ const result={selectedQuodes:ids.length,openedBeforeDownloadsComplete,allPrefetchedAfterOpening:true,unrelatedQuodesNotDownloaded:true,offlineReopened:true,offlineCharacterSwitch:true,offlineGenerated:generated.length,errors};
  await mkdir('artifacts/exercise-arcade-cache',{recursive:true});await writeFile('artifacts/exercise-arcade-cache/results.json',JSON.stringify(result,null,2));console.log(result);
 }finally{await browser.close();}
