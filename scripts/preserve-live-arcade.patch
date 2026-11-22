@@ -132,17 +132,17 @@
  }
 --- a/runtime/arcade/style.css
 +++ b/runtime/arcade/style.css
-@@ -59,3 +59,5 @@
- .bonus-streak .streak-figure{width:100%;height:var(--bonus-icon-height);min-width:0}
- .bonus-streak .streak-portrait{width:auto;height:var(--bonus-icon-height);max-width:none}
- @media(max-width:700px){.streak-hud.hud.bonus-streaks{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;--bonus-icon-height:clamp(12px,7cqw,32px)}.question-topbar:has(.bonus-streaks){grid-template-columns:36px minmax(0,1fr);gap:8px;padding:12px 10px}.bonus-streak{padding:10px 6px}}
+@@ -64,3 +64,5 @@
+ @media(max-width:480px){.character-preview{left:10px;top:10px;width:44px;height:52px}.home-topbar .top-controls{gap:6px}.character-stickers{padding:10px}.character-sticker-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}.character-thumbnail{height:65px;padding:3px;gap:3px}.character-thumbnail img{height:43px}.character-thumbnail span{font-size:9px}}
+ 
+ .home-fight-banner:has(>.fighter-gif[data-kind="sprite"]){position:relative}.home-fight-banner>.fighter-gif[data-kind="sprite"]{position:absolute;inset:7.5%;width:85%;height:85%;max-height:85%;image-rendering:pixelated}
 +
 +.range-marks{position:absolute;left:9px;right:9px;top:16px;height:4px;display:flex;justify-content:space-between;align-items:center;pointer-events:none}.range-marks span{width:2px;height:2px;border-radius:50%;background:#f0eefb}
 --- a/arcade-player/style.css
 +++ b/arcade-player/style.css
-@@ -59,3 +59,5 @@
- .bonus-streak .streak-figure{width:100%;height:var(--bonus-icon-height);min-width:0}
- .bonus-streak .streak-portrait{width:auto;height:var(--bonus-icon-height);max-width:none}
- @media(max-width:700px){.streak-hud.hud.bonus-streaks{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;--bonus-icon-height:clamp(12px,7cqw,32px)}.question-topbar:has(.bonus-streaks){grid-template-columns:36px minmax(0,1fr);gap:8px;padding:12px 10px}.bonus-streak{padding:10px 6px}}
+@@ -64,3 +64,5 @@
+ @media(max-width:480px){.character-preview{left:10px;top:10px;width:44px;height:52px}.home-topbar .top-controls{gap:6px}.character-stickers{padding:10px}.character-sticker-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}.character-thumbnail{height:65px;padding:3px;gap:3px}.character-thumbnail img{height:43px}.character-thumbnail span{font-size:9px}}
+ 
+ .home-fight-banner:has(>.fighter-gif[data-kind="sprite"]){position:relative}.home-fight-banner>.fighter-gif[data-kind="sprite"]{position:absolute;inset:7.5%;width:85%;height:85%;max-height:85%;image-rendering:pixelated}
 +
 +.range-marks{position:absolute;left:9px;right:9px;top:16px;height:4px;display:flex;justify-content:space-between;align-items:center;pointer-events:none}.range-marks span{width:2px;height:2px;border-radius:50%;background:#f0eefb}

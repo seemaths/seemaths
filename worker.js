@@ -77,6 +77,7 @@ async function handleRequest(request, env) {
       const asset = new URL(incoming);
       if (asset.pathname === '/api/quode') asset.pathname='/api/quodes/'+encodeURIComponent(asset.searchParams.get('quode') || '');
       let response=await env.ASSETS.fetch(new Request(asset,request));
+      if(asset.pathname.startsWith('/_offline/')&&response.ok){response=new Response(response.body,response);response.headers.set('Cache-Control','public, max-age=31536000, immutable');}
       if (mathspaceHost && response.ok && publicPath === '/') {
         response=new Response((await response.text()).replace('href="/mathspace-player/manifest.webmanifest"','href="/manifest.webmanifest"').replace('data-app="mathspace" defer','data-app="mathspace" data-scope="/" defer'),response);
         response.headers.delete('Content-Length');
