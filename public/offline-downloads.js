@@ -240,10 +240,11 @@ export async function prefetchQuodes(ids, roots = []) {
 }
 
 export async function arcadeAssetRoots() {
-  const {library} = await import('/arcade-player/animations.js');
-  const base = new URL('/arcade-player/', location.origin);
-  return ['/arcade-player/icon.svg', ...Object.entries(library).flatMap(([id,asset]) => [
-    asset.localURL,
-    new URL(asset.kind === 'banner' ? `assets/banners/${id}-poster.webp` : `assets/poses/${id}.png`, base).href,
-  ].filter(Boolean))];
+  const base=new URL('/arcade-player/',location.origin);
+  const response=await fetch(new URL('assets/manifest.json',base));
+  if(!response.ok)throw Error('Connect to finish downloading the Arcade characters.');
+  const artwork=await response.json();
+  return ['/arcade-player/icon.svg','/arcade-player/assets/manifest.json',...Object.entries(artwork).flatMap(([id,asset])=>asset.bytesAfter
+    ? [`assets/banners/${id}.webp`,`assets/banners/${id}-poster.webp`]
+    : [`assets/sprites/${id}.gif`,`assets/poses/${id}.png`]).map(path=>new URL(path,base).href)];
 }
