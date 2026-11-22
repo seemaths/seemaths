@@ -164,8 +164,10 @@ body.builder-started .masthead .brand,body.builder-started .masthead .player-lin
 
 #activity-form.is-locked #open-activity:disabled{filter:grayscale(1);opacity:.4;cursor:default}
 
-/* The full address is selectable text; sharing controls span its width. */
+/* Sharing controls span the full student address, which opens its progress page. */
 .exercise-share-content{width:max-content;max-width:100%;margin:0 auto}
-.exercise-share-url{width:auto;max-width:100%;height:auto;white-space:normal;overflow-wrap:anywhere;overflow:visible;text-overflow:clip;cursor:text;user-select:text}
+.exercise-share-url{width:auto;max-width:100%;height:auto;white-space:normal;overflow-wrap:anywhere;overflow:visible;text-overflow:clip;cursor:pointer;user-select:text}
 .exercise-share-content .exercise-share-actions{width:100%;justify-content:space-between}
 .exercise-share-content .exercise-share-actions button,.exercise-share-content .exercise-share-actions a{flex:1 1 0;min-width:0}
+
+.exercise-share-url:hover,.exercise-share-url:focus-visible{text-decoration:underline}

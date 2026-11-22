@@ -104,9 +104,15 @@
     $('copy-link-label').textContent = assignment ? `Exercise ${assignment.reference}` : 'Create Exercise';
     updateSharing(assignment);
   }
-  let sharedURL = '', sharedTitle = '';
+  let sharedURL = '', sharedTitle = '', sharedManagementURL = '';
   function updateSharing(assignment) {
     sharedURL = assignment?.studentURL || '';
+    sharedManagementURL = assignment ? '/manage/' + assignment.id : '';
+    const link = $('exercise-share-url');
+    if (sharedManagementURL) link.href = sharedManagementURL;
+    else link.removeAttribute('href');
+    link.title = assignment ? `View exercise ${assignment.reference} progress` : '';
+    $('copy-link').title = assignment ? `View exercise ${assignment.reference} progress` : 'Create Exercise';
     sharedTitle = assignment ? `See Maths · Exercise ${assignment.reference}` : '';
     $('exercise-share').classList.toggle('is-ready', Boolean(sharedURL));
     $('exercise-share').inert = !sharedURL;
@@ -372,6 +378,7 @@
     catch (error) {if (error.name !== 'AbortError') $('status').textContent = 'Use Copy or choose another sharing option.';}
   });
   $('copy-link').addEventListener('click', async () => {
+    if (sharedManagementURL) { location.assign(sharedManagementURL); return; }
     if (!validate(true)) return;
     const button = $('copy-link'); button.disabled = true;
     setSetupLocked(true);
