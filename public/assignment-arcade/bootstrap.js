@@ -14,7 +14,7 @@ export async function startArcade(student) {
   try {
     if (!student?.recipe) throw new Error('Connect to the internet to open this Arcade exercise.');
     const campaign=campaignFromRecipe(student.recipe, `assignment-${student.assignmentId}`);
-    const storageKey=`seemaths.arcade:${student.assignmentId}:${student.id}`;
+    const storageKey=()=>`seemaths.arcade:${student.assignmentId}:${student.id}${globalThis.quodeArcadeManagedScope ? `:${globalThis.quodeArcadeManagedScope}` : ''}`;
     // Keep the existing Arcade artwork/runtime assets and its standalone game intact.
     await stylesheet('/arcade-player/style.css');
     await stylesheet('/assignment-arcade/style.css');
@@ -23,10 +23,10 @@ export async function startArcade(student) {
     document.title='Arcade · See Maths';
     globalThis.quodeArcadeCampaign=campaign;
     globalThis.quodeArcadeHost={
-      async load(){return JSON.parse(localStorage.getItem(storageKey) || 'null');},
+      async load(){return JSON.parse(localStorage.getItem(storageKey()) || 'null');},
       async save(state){
         if(student.sharedAttemptId) state.attemptId=student.sharedAttemptId;
-        localStorage.setItem(storageKey,JSON.stringify(state));
+        localStorage.setItem(storageKey(),JSON.stringify(state));
         if (!globalThis.seemathsExerciseSearch) {const url=new URL(location.href);url.searchParams.set('attempt',state.attemptId);history.replaceState(null,'',url);}
         await putAttempt(progressAttempt(state,student.recipe));
       },
