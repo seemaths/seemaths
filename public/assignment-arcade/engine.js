@@ -31,7 +31,7 @@ export function chooseType(state) {
   return pool[Math.floor(Math.random()*pool.length)];
 }
 export function event(state,type,payload={}) {
-  const entry={id:uid(),type,at:new Date().toISOString(),campaign:state.campaign,...payload};
+  const entry={id:uid(),type,at:new Date().toISOString(),campaign:state.campaign,...(state.managedRewards?{managed:true,profileScope:state.managedRewardScope,runId:state.managedResetId||'initial'}:{}),...payload};
   state.events.push(entry); return entry;
 }
 export function present(state,type,question,fingerprint) {
@@ -41,6 +41,9 @@ export function present(state,type,question,fingerprint) {
   state.exercises[type].stats.attempted++;
   if(bonus)state.bonus.stats.attempted++;
   return event(state,'question-presented',{questionId:state.active.id,module:state.exercises[type].id,level:levelNumber(state,state.active.level),bonus});
+}
+export function currentReportStreak(state, active=state.active) {
+  return active.bonus ? Math.max(0,...state.bonus.streaks.filter(value=>value<5)) : state.exercises[active.type].streak;
 }
 export function help(state) {
   const a=state.active;if(!a||a.resolved||a.help)return null;
@@ -74,14 +77,14 @@ export function answer(state,correct,value) {
       result.reward=Math.min(range.max,Math.round(range.min*exercise.counts[a.level]/5));
     }
     if(result.reward){
-      const id=`${state.campaign}:${a.bonus?'bonus':`${exercise.id}:${a.level}`}`;
+      const id=`${state.campaign}:${a.bonus?'bonus':`${exercise.id}:${a.level}`}${state.managedRewards ? `:run:${state.managedResetId || 'initial'}` : ''}`;
       if(!state.rewards.some(r=>r.id===id)){
         state.coins+=result.reward;state.rewards.push({id,coins:result.reward,at:new Date().toISOString()});
-        event(state,'reward-earned',{rewardId:id,coins:result.reward,questionId:a.id});
+        event(state,'reward-earned',{rewardId:id,ruleKey:a.bonus?'bonus':(state.managedRuleKeys?.[a.type] || exercise.id),coins:result.reward,questionId:a.id});
       }
     }
   }
-  event(state,'question-answered',{questionId:a.id,module:exercise.id,level:levelNumber(state,a.level),bonus:a.bonus,correct,independent,helped:a.help,value});
+  event(state,'question-answered',{questionId:a.id,module:exercise.id,level:levelNumber(state,a.level),bonus:a.bonus,correct,independent,helped:a.help,currentStreak:currentReportStreak(state,a),value});
   if(result.cleared)event(state,'level-completed',{module:exercise.id,level:levelNumber(state,a.level),bonus:a.bonus,coins:result.reward});
   if(result.cleared&&(a.bonus||exercise.cleared===levelCount(state)))event(state,'exercise-ended',{module:a.bonus?'bonus':exercise.id,completed:true});
   return result;

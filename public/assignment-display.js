@@ -9,3 +9,12 @@ export function assignmentDateLabel(createdAt, expiresAt, now = new Date()) {
   const expiry=expires<=now?'expired':`exp ${days}d`;
   return `${time}, ${date} (${expiry})`;
 }
+
+// An Arcade stage spans many independent questions; its check count is not a retry count.
+export function assignmentProgressDot(player, answer) {
+  const arcade=player==='arcade';
+  const state=answer?.correct===true ? (answer.helped || (!arcade && answer.checks>1) ? 'helped' : 'first') : answer?.skipped ? 'skipped' : 'untried';
+  const label=arcade&&answer?.correct===true ? (answer.helped ? 'Stage cleared with Help Me' : 'Stage cleared')
+    : state==='first'?'Correct first try':state==='helped'?(answer.helped?'Correct with Help Me':'Correct after retry'):state==='skipped'?'Skipped':answer?'In progress':'Not tried';
+  return {state,label};
+}

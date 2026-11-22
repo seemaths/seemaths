@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {assignmentDateLabel} from '../../public/assignment-display.js';
+import {assignmentDateLabel,assignmentProgressDot} from '../../public/assignment-display.js';
 process.env.TZ='Australia/Sydney';
 const seconds=date=>date.getTime()/1000;
 test('creation uses local 12-hour time and expiry uses the browser calendar date',()=>{
@@ -18,4 +18,10 @@ test('same-day and past expiry labels use the fixed expiry timestamp',()=>{
 test('daylight saving does not turn tomorrow into zero or two calendar days',()=>{
   const created=seconds(new Date(2026,9,3,15,0)),expires=seconds(new Date(2026,9,5,0,30));
   assert.equal(assignmentDateLabel(created,expires,new Date(2026,9,4,0,15)),'3:00 PM, 3 Oct (exp 1d)');
+});
+
+test('Arcade stage checks do not imply repeated attempts at one question',()=>{
+  assert.deepEqual(assignmentProgressDot('arcade',{correct:true,checks:10,helped:false}),{state:'first',label:'Stage cleared'});
+  assert.deepEqual(assignmentProgressDot('arcade',{correct:true,checks:10,helped:true}),{state:'helped',label:'Stage cleared with Help Me'});
+  assert.deepEqual(assignmentProgressDot('standard',{correct:true,checks:2}),{state:'helped',label:'Correct after retry'});
 });

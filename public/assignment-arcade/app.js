@@ -1,3 +1,4 @@
+import {createSitNStudyIntegration,resetManagedState} from './sitnstudy.js';
 import {createCharacterPicker} from '/arcade-player/character-picker.js';
 import {freshState,stageIndex,chooseType,present,help,answer,event,localStore,validateState,rewardSettings} from './engine.js';
 import {mountQuestionnaire} from '/runtime/questionnaire.js';
@@ -10,6 +11,7 @@ import {animationImage,slots,fighterCelebration,clearFighterAnimation,preloadCel
 const root=document.querySelector('#game');
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
 const btn=(text,action,cls='button')=>{const n=el('button',cls,text);n.type='button';n.onclick=action;return n;};
+let managedIntegration;
 let state,campaign,store,questions,screen='map',busy=false,feedback,saveChain=Promise.resolve(),sent=new Set(),saved=true;
 const audio=createArcadeAudio(selectedCharacter);
 const celebration=createFlowerCelebration({isMuted:()=>audio.muted});
@@ -21,13 +23,13 @@ document.addEventListener('click',e=>{const button=e.target.closest('button');if
 // A host must install this adapter before importing app.js. There is no implicit iframe detection.
 const host=globalThis.quodeArcadeHost;
 const managedBySitNStudy = !document.dispatchEvent(new Event('quode-managed-host-check', {cancelable:true}));
-async function persist(){
+async function persist(deliver=true){
   const snapshot=structuredClone(state);saved=false;status();
   const job=saveChain.catch(()=>{}).then(async()=>{
     await store.save(snapshot);saved=true;status();
     for(const e of snapshot.events){if(sent.has(e.id))continue;console.info('[QuodeArcade]',JSON.stringify(e));try{await host?.emit?.(e);sent.add(e.id);}catch{ /* The saved event ledger allows host replay and deduplication. */ }}
   });saveChain=job;
-  try{await job;return true;}catch(error){saved=false;status();message(`Progress could not be saved: ${error.message}. Keep this tab open and retry.`,true);return false;}
+  try{await job;if(deliver)void managedIntegration?.flush();return true;}catch(error){saved=false;status();message(`Progress could not be saved: ${error.message}. Keep this tab open and retry.`,true);return false;}
 }
 function status(){const n=document.querySelector('#save-error');if(n)n.hidden=saved;}
 function message(text,error=false){if(feedback){feedback.textContent=text;feedback.className=error?'feedback error':'feedback';}}
@@ -93,6 +95,7 @@ function warmQuestions(){
   else if(stage<campaign.exercises.length-1)questions.warm(stage+1,0);
 }
 async function play(){
+  if(managedBySitNStudy&&!managedIntegration?.isReady()){message('Set assignment coin ranges in the Parent Portal to play.',true);return;}
   if(busy||state.bonus.done)return;busy=true;screen='play';
   try{
     if(state.active?.resolved)state.active=null;
@@ -191,10 +194,34 @@ try{
   campaign=globalThis.quodeArcadeCampaign;
   if(!campaign?.exercises.length||!campaign.levels.length)throw Error('Open Arcade from an exercise link.');
   if(host&&(!host.load||!host.save))throw Error('Sit-and-Study must supply load() and save() before starting the game.');
+  let managedAdapter;
+  if(managedBySitNStudy){
+    managedAdapter=await new Promise(resolve=>{
+      globalThis.quodeArcadeIntegration={connect:resolve};
+      window.dispatchEvent(new Event('quode-arcade-ready'));
+    });
+    if(!/^[a-f0-9]{64}$/.test(managedAdapter.profileScope||''))throw Error('The child profile is unavailable. Reopen Arcade to continue.');
+    globalThis.quodeArcadeManagedScope=managedAdapter.profileScope;
+  }
   store=host||localStore(`quode-arcade:${campaign.id}`);
   const loaded=await store.load();state=loaded?validateState(loaded,campaign):freshState(campaign);
+  if(managedBySitNStudy){
+    state.managedRewards=false;
+    managedIntegration=createSitNStudyIntegration({getState:()=>state,campaign,save:persist,onStatus:({ready,error})=>{
+      let status=document.querySelector('#managed-wallet-status');
+      if(!status){status=el('p','feedback');status.id='managed-wallet-status';status.setAttribute('role','status');root.append(status);}
+      status.textContent=error;status.hidden=ready&&!error;
+    },onReset:async resetId=>{
+      state=resetManagedState(state,campaign,resetId);
+      questions=createQuestionQueue({getState:()=>state,campaign,fetchBatch,save:persist});
+      showMap();if(!await persist(false))throw Error('Could not save assignment progress.');
+    }});
+    globalThis.quodeArcadeIntegration={connect:managedIntegration.connect};
+    managedIntegration.connect(managedAdapter);
+    window.dispatchEvent(new Event('quode-arcade-ready'));
+  }
   questions=createQuestionQueue({getState:()=>state,campaign,fetchBatch,save:persist});
   // Events retained in the save can be redelivered by a host; stable IDs make delivery idempotent.
   if(!host)sent=new Set(state.events.map(e=>e.id));
-  showMap();await persist();
+  showMap();managedIntegration?.status();await persist();
 }catch(error){root.replaceChildren(el('main','fatal',error.message));}

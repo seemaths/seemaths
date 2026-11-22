@@ -1,4 +1,4 @@
-import {assignmentDateLabel} from '/assignment-display.js?v=2';
+import {assignmentDateLabel,assignmentProgressDot} from '/assignment-display.js?v=3';
 import {studentAssignmentURL} from '/assignment-links.js?v=2';
 import '/assignment-library.js?v=2';
 const root = document.querySelector("#app");
@@ -288,8 +288,7 @@ async function dashboard(id) {
           const duration = minutes ? `${minutes} ${minutes === 1 ? 'min' : 'mins'}` : s.activeSeconds ? '<1 min' : '0 mins';
           return `<div class="student-progress-row"><span class="student-number">${studentNumber(s.number)}</span><div class="student-progress-dots" aria-label="Question progress">${Array.from({length:data.recipe.count},(_,index) => {
             const answer=s.answers.find(a=>a.index===index+1);
-            const state=answer?.correct===true ? (answer.helped || answer.checks>1 ? 'helped' : 'first') : answer?.skipped ? 'skipped' : 'untried';
-            const label=state==='first'?'Correct first try':state==='helped'?(answer.helped?'Correct with Help Me':'Correct after retry'):state==='skipped'?'Skipped':answer?'In progress':'Not tried';
+            const {state,label}=assignmentProgressDot(data.recipe.player,answer);
             return `<span class="progress-dot ${state}" role="img" aria-label="Question ${index+1}: ${label}" title="Question ${index+1}: ${label}"></span>`;
           }).join('')}</div><span class="student-time" aria-label="Time spent">${escape(duration)}</span></div>`;
         }).join('')}</div>`
