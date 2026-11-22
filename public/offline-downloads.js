@@ -5,18 +5,16 @@ export function downloadActivity({readRecipe, planActivity}) {
   const panel = document.createElement('aside');
   panel.className = 'seemaths-downloads';
   panel.hidden = true;
-  const row = document.createElement('div'); row.setAttribute('aria-hidden', 'true');
-  const minimum = document.createElement('span');
-  minimum.className = 'seemaths-download-min'; minimum.textContent = '0';
-  const maximum = document.createElement('span');
-  maximum.className = 'seemaths-download-max'; maximum.textContent = '0';
+  const row = document.createElement('div');
+  const label = document.createElement('span');
+  label.textContent = 'Downloading questions…';
+  label.setAttribute('role', 'status');
+  label.setAttribute('aria-live', 'polite');
   const retry = document.createElement('button');
-  retry.type = 'button'; retry.hidden = true;
-  retry.setAttribute('aria-label', 'Retry downloads'); retry.title = 'Retry downloads';
-  retry.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 7a7 7 0 0 1 11.6-1L20 9M4 15l2.3 3A7 7 0 0 0 17.9 17"/></svg>';
+  retry.type = 'button'; retry.textContent = 'Retry'; retry.hidden = true;
   const bar = document.createElement('progress');
-  bar.setAttribute('aria-label', 'Question code downloads');
-  row.append(minimum, maximum); panel.append(row, bar, retry);
+  bar.setAttribute('aria-label', 'Question downloads');
+  row.append(label, retry); panel.append(row, bar);
   document.body.append(panel);
   let total = 0, finished = new Set(), running = false, complete = false, stopped = false;
   let ids, roots, observedFooter, resize, show, started = false, generation = 0, workerUpgrades = 0;
@@ -32,8 +30,9 @@ export function downloadActivity({readRecipe, planActivity}) {
     }
   }
   function update(failed = false) {
-    maximum.textContent = String(total);
-    bar.setAttribute('aria-valuetext', `${finished.size} of ${total} question codes downloaded${!navigator.onLine ? ', offline' : failed ? ', paused' : ''}`);
+    const count = `${finished.size}/${total}`;
+    label.textContent = !navigator.onLine ? `Connect to finish · ${count}`
+      : failed ? `Download paused · ${count}` : `Downloading ${count}`;
     bar.max = Math.max(1, total); bar.value = finished.size;
     retry.hidden = !failed || !navigator.onLine;
     panel.dataset.completed = String(finished.size); panel.dataset.total = String(total);
@@ -48,7 +47,7 @@ export function downloadActivity({readRecipe, planActivity}) {
           return await Promise.race([
             navigator.serviceWorker.register('/sw.js', {scope:'/', updateViaCache:'none'})
               .then(() => navigator.serviceWorker.ready),
-            new Promise((_, reject) => {timer = setTimeout(() => reject(Error('Offline storage did not start. Please retry.')), 15000);}),
+            new Promise((_, reject) => {timer = setTimeout(() => reject(Error('Offline storage did not start. Please retry.')), 30000);}),
           ]);
         } finally {clearTimeout(timer);}
       })().catch(error => {registrationPromise = null; throw error;});
@@ -85,7 +84,7 @@ export function downloadActivity({readRecipe, planActivity}) {
   async function upgradeWorker() {
     const registration = await offlineRegistration();
     const previous = navigator.serviceWorker.controller;
-    state.activityOffline = 'updating'; bar.setAttribute('aria-valuetext', 'Updating offline files');
+    state.activityOffline = 'updating'; label.textContent = 'Updating downloads…';
     return new Promise((resolve, reject) => {
       let settled = false, installing;
       const activate = () => registration.waiting?.postMessage({type:'activate-offline-update'});
@@ -207,4 +206,44 @@ export function downloadActivity({readRecipe, planActivity}) {
     observer.observe(document.querySelector('#app'), {childList:true, subtree:true});
     window.addEventListener('pagehide', () => observer.disconnect(), {once:true});
   }
+}
+
+// Arcade also prepares its whole selected campaign before entering the game.
+// This only downloads the supplied IDs, never the complete catalogue.
+export async function prefetchQuodes(ids, roots = []) {
+  if (!('serviceWorker' in navigator)) return;
+  const registration = await navigator.serviceWorker.register('/sw.js', {scope:'/', updateViaCache:'none'});
+  if (navigator.onLine) await registration.update();
+  const pending = registration.installing || registration.waiting;
+  if (pending && !['activated','redundant'].includes(pending.state)) await new Promise((resolve,reject) => {
+    const timer=setTimeout(()=>{pending.removeEventListener('statechange',changed);reject(Error('Exercise downloads are paused. Please retry.'));},60000);
+    const changed=()=>{
+      if(pending.state==='installed')pending.postMessage({type:'activate-offline-update'});
+      if(['activated','redundant'].includes(pending.state)){clearTimeout(timer);pending.removeEventListener('statechange',changed);(pending.state==='activated'||registration.active)?resolve():reject(Error('Exercise downloads are paused. Please retry.'));}
+    };
+    pending.addEventListener('statechange',changed);changed();
+  });
+  await navigator.serviceWorker.ready;
+  const worker=navigator.serviceWorker.controller || registration.active;
+  const urls=[...roots,...[...new Set(ids)].flatMap(id=>{
+    if(!/^[a-z0-9][a-z0-9_-]*$/.test(id))throw Error('Invalid exercise question code');
+    return [`/${id}/web/generator.mjs`,`/${id}/web/generator-data.json`,`/api/quodes/${id}`];
+  })];
+  await new Promise((resolve,reject)=>{
+    const channel=new MessageChannel();
+    const timer=setTimeout(()=>{channel.port1.close();reject(Error('Exercise downloads are paused. Please retry.'));},60000);
+    channel.port1.onmessage=({data})=>{clearTimeout(timer);channel.port1.close();
+      data?.activityDownloads===1&&Array.isArray(data.missing)&&!data.missing.length?resolve():reject(Error('Connect to finish downloading this exercise.'));
+    };
+    worker.postMessage({type:'cache-page-resources',urls},[channel.port2]);
+  });
+}
+
+export async function arcadeAssetRoots() {
+  const {library} = await import('/arcade-player/animations.js');
+  const base = new URL('/arcade-player/', location.origin);
+  return ['/arcade-player/icon.svg', ...Object.entries(library).flatMap(([id,asset]) => [
+    asset.localURL,
+    new URL(asset.kind === 'banner' ? `assets/banners/${id}-poster.webp` : `assets/poses/${id}.png`, base).href,
+  ].filter(Boolean))];
 }

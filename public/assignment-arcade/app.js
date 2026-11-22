@@ -1,16 +1,17 @@
+import {createCharacterPicker} from '/arcade-player/character-picker.js';
 import {freshState,stageIndex,chooseType,present,help,answer,event,localStore,validateState,rewardSettings} from './engine.js';
 import {mountQuestionnaire} from '/runtime/questionnaire.js';
 import {generateExercise} from './campaign.js';
 import {createArcadeAudio} from '/arcade-player/audio.js';
 import {createQuestionQueue} from './questions.js';
 import {createFlowerCelebration} from '/runtime/flower-celebration.js';
-import {animationImage,slots,fighterCelebration,clearFighterAnimation,preloadCelebrations,nextHomeBanner,stagePoses,frozenPose} from '/arcade-player/animations.js';
+import {animationImage,slots,fighterCelebration,clearFighterAnimation,preloadCelebrations,nextHomeBanner,stagePoses,frozenPose,bannerPoster,selectedCharacter} from '/arcade-player/animations.js';
 
 const root=document.querySelector('#game');
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
 const btn=(text,action,cls='button')=>{const n=el('button',cls,text);n.type='button';n.onclick=action;return n;};
 let state,campaign,store,questions,screen='map',busy=false,feedback,saveChain=Promise.resolve(),sent=new Set(),saved=true;
-const audio=createArcadeAudio();
+const audio=createArcadeAudio(selectedCharacter);
 const celebration=createFlowerCelebration({isMuted:()=>audio.muted});
 let closeActiveHelp,renderer;
 const pose = index => stagePoses[index % stagePoses.length];
@@ -59,10 +60,10 @@ function askParentPin(){
   form.append(label,input,submit,cancel);form.onsubmit=e=>{e.preventDefault();if(input.value==='1978'){dialog.close();parents();}else{input.value='';input.setAttribute('aria-invalid','true');input.setAttribute('aria-label','Incorrect PIN. Try again');input.focus();}};
   dialog.append(form);root.append(dialog);dialog.addEventListener('close',()=>dialog.remove());dialog.showModal();input.focus();
 }
-function homeBanner(){const id=nextHomeBanner(),box=el('div','arena home-fight-banner'),image=animationImage(id);box.style.backgroundImage=`url("/arcade-player/assets/banners/${id}-poster.webp")`;box.style.backgroundSize='contain';box.style.backgroundPosition='center';box.style.backgroundRepeat='no-repeat';image.fetchPriority='high';image.loading='eager';box.append(image);return box;}
+function homeBanner(){const id=nextHomeBanner(),box=el('div','arena home-fight-banner'),image=animationImage(id);box.style.backgroundImage=`url("${bannerPoster(id)}")`;box.style.backgroundSize='contain';box.style.backgroundPosition='center';box.style.backgroundRepeat='no-repeat';image.fetchPriority='high';image.loading='eager';image.addEventListener('load',()=>{box.style.backgroundImage='none';},{once:true});box.append(image);return createCharacterPicker(showMap,box);}
 function rewardBadge(module){if(managedBySitNStudy)return null;const prefix=`${campaign.id}:${module}${module==='bonus'?'':':'}`,award=state.rewards.filter(r=>module==='bonus'?r.id===prefix:r.id.startsWith(prefix)).at(-1);if(!award)return null;const badge=el('span','stage-earned',`+${award.coins} ◈`);badge.setAttribute('aria-label',`Last level reward: ${award.coins} coins`);return badge;}
-function glove(){const image=el('img','level-glove');image.src='/arcade-player/boxing-glove.svg';image.alt='';image.setAttribute('aria-hidden','true');return image;}
-function showMap(){screen='map';audio.setScene('arena');root.dataset.music=audio.scene;const main=shell();
+function glove(){const image=frozenPose(slots.cleared);image.className='level-glove';return image;}
+function showMap(){screen='map';audio.setCharacter(selectedCharacter);audio.setScene('arena');root.dataset.music=audio.scene;const main=shell();
   main.append(el('h1','sr-only',campaign.title),homeBanner());
   const current=stageIndex(state),journey=el('section','journey');journey.setAttribute('aria-label','Exercise journey');
   campaign.exercises.forEach((x,i)=>{const e=state.exercises[i],locked=current>=0&&i>current,card=el('article',`stage ${locked?'locked':''} ${e.cleared===campaign.levels.length?'complete':''}`);card.style.setProperty('--accent',x.color);

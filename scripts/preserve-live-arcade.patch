@@ -132,17 +132,11 @@
  }
 --- a/runtime/arcade/style.css
 +++ b/runtime/arcade/style.css
-@@ -59,3 +59,5 @@
- .bonus-streak .streak-figure{width:100%;height:var(--bonus-icon-height);min-width:0}
- .bonus-streak .streak-portrait{width:auto;height:var(--bonus-icon-height);max-width:none}
- @media(max-width:700px){.streak-hud.hud.bonus-streaks{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;--bonus-icon-height:clamp(12px,7cqw,32px)}.question-topbar:has(.bonus-streaks){grid-template-columns:36px minmax(0,1fr);gap:8px;padding:12px 10px}.bonus-streak{padding:10px 6px}}
+@@ -66,0 +67,2 @@
 +
 +.range-marks{position:absolute;left:9px;right:9px;top:16px;height:4px;display:flex;justify-content:space-between;align-items:center;pointer-events:none}.range-marks span{width:2px;height:2px;border-radius:50%;background:#f0eefb}
 --- a/arcade-player/style.css
 +++ b/arcade-player/style.css
-@@ -59,3 +59,5 @@
- .bonus-streak .streak-figure{width:100%;height:var(--bonus-icon-height);min-width:0}
- .bonus-streak .streak-portrait{width:auto;height:var(--bonus-icon-height);max-width:none}
- @media(max-width:700px){.streak-hud.hud.bonus-streaks{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;--bonus-icon-height:clamp(12px,7cqw,32px)}.question-topbar:has(.bonus-streaks){grid-template-columns:36px minmax(0,1fr);gap:8px;padding:12px 10px}.bonus-streak{padding:10px 6px}}
+@@ -66,0 +67,2 @@
 +
 +.range-marks{position:absolute;left:9px;right:9px;top:16px;height:4px;display:flex;justify-content:space-between;align-items:center;pointer-events:none}.range-marks span{width:2px;height:2px;border-radius:50%;background:#f0eefb}
